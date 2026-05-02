@@ -79,6 +79,31 @@
             height: 100%;
             object-fit: cover;
         }
+        .nav-cards {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-bottom: 10px;
+        }
+        .nav-card {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 20px;
+            background: #f0f7fd;
+            border: 2px solid #2980b9;
+            border-radius: 8px;
+            text-decoration: none;
+            color: #2980b9;
+            font-weight: 600;
+            font-size: 1em;
+            transition: background 0.15s, color 0.15s;
+        }
+        .nav-card:hover {
+            background: #2980b9;
+            color: #fff;
+        }
+        .nav-card .icon { font-size: 1.4em; }
     </style>
 </head>
 <body>
@@ -91,6 +116,15 @@
         <div class="contact-info">
             <p>Email: rukphonp@gmail.com</p>
             <p>Phone: +66 875014847</p>
+        </div>
+
+        <div class="section">
+            <h2>Quick Links</h2>
+            <div class="nav-cards">
+                <a href="investment.html" class="nav-card">
+                    <span class="icon">📈</span> Investment Tracker
+                </a>
+            </div>
         </div>
 
         <div class="section">
