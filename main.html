@@ -6,14 +6,13 @@
     <title>Rukphong Pullaoy - Personal Webpage</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600&family=Roboto+Slab:wght@400;700&display=swap');
+        * { box-sizing: border-box; }
+        body { font-family: 'Open Sans', sans-serif; margin: 0; padding: 0; background-color: #eaeaea; color: #333; }
 
-        body {
-            font-family: 'Open Sans', sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: #eaeaea;
-            color: #333;
-        }
+        .site-nav { background: #2c3e50; display: flex; flex-wrap: wrap; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 6px rgba(0,0,0,0.25); }
+        .site-nav a { color: #ecf0f1; text-decoration: none; padding: 12px 18px; font-size: 0.9em; font-weight: 600; font-family: 'Open Sans', sans-serif; transition: background 0.15s; }
+        .site-nav a:hover, .site-nav a.active { background: #2980b9; }
+
         .container {
             width: 90%;
             max-width: 1000px;
@@ -23,25 +22,10 @@
             box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
             border-radius: 10px;
         }
-        h1 {
-            font-family: 'Roboto Slab', serif;
-            color: #2c3e50;
-            text-align: center;
-            font-size: 2.5em;
-            margin-bottom: 20px;
-        }
-        .contact-info {
-            text-align: center;
-            margin-bottom: 20px;
-        }
-        .contact-info p {
-            margin: 5px 0;
-            font-size: 1.2em;
-            color: #7f8c8d;
-        }
-        .section {
-            margin-bottom: 30px;
-        }
+        h1 { font-family: 'Roboto Slab', serif; color: #2c3e50; text-align: center; font-size: 2.5em; margin-bottom: 20px; }
+        .contact-info { text-align: center; margin-bottom: 20px; }
+        .contact-info p { margin: 5px 0; font-size: 1.2em; color: #7f8c8d; }
+        .section { margin-bottom: 30px; }
         .section h2 {
             font-family: 'Roboto Slab', serif;
             font-size: 1.8em;
@@ -50,141 +34,93 @@
             border-bottom: 2px solid #ddd;
             padding-bottom: 5px;
         }
-        .section p, .section ul {
-            font-size: 1.1em;
-            line-height: 1.6em;
-            color: #34495e;
-        }
-        ul {
-            list-style-type: none;
-            padding: 0;
-        }
-        ul li {
-            padding: 8px 0;
-        }
-        ul li strong {
-            color: #2980b9;
-        }
+        .section p, .section ul { font-size: 1.1em; line-height: 1.6em; color: #34495e; }
+        ul { list-style-type: none; padding: 0; }
+        ul li { padding: 8px 0; }
+        ul li strong { color: #2980b9; }
         .profile-image {
-            width: 150px;
-            height: 150px;
-            border-radius: 50%;
-            overflow: hidden;
-            margin: 0 auto 20px auto;
-            display: block;
-            border: 5px solid #ecf0f1;
+            width: 150px; height: 150px; border-radius: 50%; overflow: hidden;
+            margin: 0 auto 20px auto; display: block; border: 5px solid #ecf0f1;
         }
-        .profile-image img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-        .nav-cards {
-            display: flex;
-            gap: 15px;
-            flex-wrap: wrap;
-            margin-bottom: 10px;
-        }
-        .nav-card {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 14px 20px;
-            background: #f0f7fd;
-            border: 2px solid #2980b9;
-            border-radius: 8px;
-            text-decoration: none;
-            color: #2980b9;
-            font-weight: 600;
-            font-size: 1em;
-            transition: background 0.15s, color 0.15s;
-        }
-        .nav-card:hover {
-            background: #2980b9;
-            color: #fff;
-        }
-        .nav-card .icon { font-size: 1.4em; }
+        .profile-image img { width: 100%; height: 100%; object-fit: cover; }
     </style>
 </head>
 <body>
+<nav class="site-nav">
+    <a href="main.html" class="active">&#128100; Profile</a>
+    <a href="investment.html">&#128200; Investment</a>
+    <a href="expense.html">&#128176; Expense</a>
+    <a href="notes.html">&#128221; Notes</a>
+    <a href="tasks.html">&#9989; Tasks</a>
+</nav>
 
-    <div class="container">
-        <div class="profile-image">
-            <img src="https://via.placeholder.com/150" alt="Profile Picture">
-        </div>
-        <h1>Rukphong Pullaoy</h1>
-        <div class="contact-info">
-            <p>Email: rukphonp@gmail.com</p>
-            <p>Phone: +66 875014847</p>
-        </div>
-
-        <div class="section">
-            <h2>Quick Links</h2>
-            <div class="nav-cards">
-                <a href="investment.html" class="nav-card">
-                    <span class="icon">📈</span> Investment Tracker
-                </a>
-            </div>
-        </div>
-
-        <div class="section">
-            <h2>Summary</h2>
-            <p>
-                I have solid experience in technical WMS, TMS, ERP, and business analysis/operations/improvement.
-                I possess knowledge and experience in project management, system integration, and vendor management,
-                especially in the logistics business. With long-term experience, I have progressed from operator to management,
-                giving me a thorough understanding of operations and top-level business strategies.
-                I have a global mindset, continuously strive for self-improvement, never give up on hard work, and maintain a
-                practical working style. I delve deeply into problems and work to solve them as soon as possible with the
-                capabilities I possess.
-            </p>
-        </div>
-
-        <div class="section">
-            <h2>Career History</h2>
-            <ul>
-                <li><strong>Senior Consultant APAC / Global professional services at Infor</strong> (Mar 2022 - Present)</li>
-                <li><strong>Product Implementation Manager at Anchanto</strong> (Nov 2020 - Feb 2022)</li>
-                <li><strong>Assistant IT Manager / Project Management at LF Logistics</strong> (May 2018 - Nov 2020)</li>
-                <li><strong>Head of Support / Senior at SCG Logistic Management Co., Ltd.</strong> (Dec 2002 - Apr 2018)</li>
-                <li><strong>IT Support at CDG Group</strong> (Jun 2001 - Dec 2002)</li>
-            </ul>
-        </div>
-
-        <div class="section">
-            <h2>Skills</h2>
-            <ul>
-                <li>SAP, Microsoft Office, SQL, Hyperion, Exceed, Tableau</li>
-                <li>Transport Management System, API, WMS, E-commerce, Fulfillment Business, Marketplace</li>
-            </ul>
-        </div>
-
-        <div class="section">
-            <h2>Languages</h2>
-            <ul>
-                <li>English</li>
-                <li>Thai</li>
-            </ul>
-        </div>
-
-        <div class="section">
-            <h2>Education</h2>
-            <ul>
-                <li><strong>Bachelor of Business Administration - BBA</strong>, Suan Sunandha Rajabhat University (2003)</li>
-                <li><strong>อนุปริญญา (Business Computer)</strong>, Wimon Administration Technology College (2000)</li>
-                <li><strong>มัธยมศึกษาตอนปลาย (Math-Sci)</strong>, Rajadhivas School (1997)</li>
-            </ul>
-        </div>
-
-        <div class="section">
-            <h2>Licenses & Certifications</h2>
-            <ul>
-                <li>SQL for Data Science - Datacamp (2019 - Current)</li>
-                <li>ACCP WMS Trainer - LiFung LF Logistics (2020 - Current)</li>
-                <li>Data Engineer and Data Science Introduction - Khon Kaen University (2020 - Current)</li>
-            </ul>
-        </div>
+<div class="container">
+    <div class="profile-image">
+        <img src="https://via.placeholder.com/150" alt="Profile Picture">
+    </div>
+    <h1>Rukphong Pullaoy</h1>
+    <div class="contact-info">
+        <p>Email: rukphonp@gmail.com</p>
+        <p>Phone: +66 875014847</p>
     </div>
 
+    <div class="section">
+        <h2>Summary</h2>
+        <p>
+            I have solid experience in technical WMS, TMS, ERP, and business analysis/operations/improvement.
+            I possess knowledge and experience in project management, system integration, and vendor management,
+            especially in the logistics business. With long-term experience, I have progressed from operator to management,
+            giving me a thorough understanding of operations and top-level business strategies.
+            I have a global mindset, continuously strive for self-improvement, never give up on hard work, and maintain a
+            practical working style. I delve deeply into problems and work to solve them as soon as possible with the
+            capabilities I possess.
+        </p>
+    </div>
+
+    <div class="section">
+        <h2>Career History</h2>
+        <ul>
+            <li><strong>Senior Consultant APAC / Global professional services at Infor</strong> (Mar 2022 - Present)</li>
+            <li><strong>Product Implementation Manager at Anchanto</strong> (Nov 2020 - Feb 2022)</li>
+            <li><strong>Assistant IT Manager / Project Management at LF Logistics</strong> (May 2018 - Nov 2020)</li>
+            <li><strong>Head of Support / Senior at SCG Logistic Management Co., Ltd.</strong> (Dec 2002 - Apr 2018)</li>
+            <li><strong>IT Support at CDG Group</strong> (Jun 2001 - Dec 2002)</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>Skills</h2>
+        <ul>
+            <li>SAP, Microsoft Office, SQL, Hyperion, Exceed, Tableau</li>
+            <li>Transport Management System, API, WMS, E-commerce, Fulfillment Business, Marketplace</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>Languages</h2>
+        <ul>
+            <li>English</li>
+            <li>Thai</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>Education</h2>
+        <ul>
+            <li><strong>Bachelor of Business Administration - BBA</strong>, Suan Sunandha Rajabhat University (2003)</li>
+            <li><strong>อนุปริญญา (Business Computer)</strong>, Wimon Administration Technology College (2000)</li>
+            <li><strong>มัธยมศึกษาตอนปลาย (Math-Sci)</strong>, Rajadhivas School (1997)</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>Licenses &amp; Certifications</h2>
+        <ul>
+            <li>SQL for Data Science - Datacamp (2019 - Current)</li>
+            <li>ACCP WMS Trainer - LiFung LF Logistics (2020 - Current)</li>
+            <li>Data Engineer and Data Science Introduction - Khon Kaen University (2020 - Current)</li>
+        </ul>
+    </div>
+</div>
 </body>
 </html>

@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notes - Rukphong Pullaoy</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600&family=Roboto+Slab:wght@400;700&display=swap');
+        * { box-sizing: border-box; }
+        body { font-family: 'Open Sans', sans-serif; margin: 0; padding: 0; background: #eaeaea; color: #333; }
+
+        .site-nav { background: #2c3e50; display: flex; flex-wrap: wrap; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 6px rgba(0,0,0,0.25); }
+        .site-nav a { color: #ecf0f1; text-decoration: none; padding: 12px 18px; font-size: 0.9em; font-weight: 600; font-family: 'Open Sans', sans-serif; transition: background 0.15s; }
+        .site-nav a:hover, .site-nav a.active { background: #2980b9; }
+
+        .container { width: 90%; max-width: 1100px; margin: 30px auto; padding: 20px; background: #fff; box-shadow: 0 0 20px rgba(0,0,0,0.1); border-radius: 10px; }
+        h1 { font-family: 'Roboto Slab', serif; color: #2c3e50; text-align: center; font-size: 2.2em; margin-bottom: 20px; }
+
+        .section-header { font-family: 'Roboto Slab', serif; color: #2c3e50; font-size: 1.35em; margin: 28px 0 14px 0; border-bottom: 2px solid #ddd; padding-bottom: 8px; }
+
+        .form-section { background: #f8f9fa; border-radius: 8px; padding: 18px; margin-bottom: 20px; }
+        .form-section h2 { font-family: 'Roboto Slab', serif; color: #2980b9; font-size: 1.25em; margin: 0 0 14px 0; border-bottom: 2px solid #ddd; padding-bottom: 7px; }
+        .form-group { display: flex; flex-direction: column; margin-bottom: 12px; }
+        .form-group label { font-size: 0.84em; font-weight: 600; color: #555; margin-bottom: 4px; }
+        .form-group input, .form-group select, .form-group textarea { padding: 8px 10px; border: 1px solid #ccc; border-radius: 5px; font-family: 'Open Sans', sans-serif; font-size: 0.93em; color: #333; }
+        .form-group textarea { resize: vertical; min-height: 100px; }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: #2980b9; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+        .form-actions { display: flex; gap: 10px; align-items: center; margin-top: 12px; flex-wrap: wrap; }
+
+        .btn { padding: 8px 17px; border: none; border-radius: 5px; cursor: pointer; font-family: 'Open Sans', sans-serif; font-size: 0.92em; font-weight: 600; transition: opacity 0.15s; }
+        .btn:hover { opacity: 0.83; }
+        .btn-primary { background: #2980b9; color: #fff; }
+        .btn-danger  { background: #e74c3c; color: #fff; padding: 4px 10px; font-size: 0.82em; }
+        .btn-edit    { background: #f39c12; color: #fff; padding: 4px 10px; font-size: 0.82em; }
+        .btn-cancel  { background: #95a5a6; color: #fff; }
+
+        .filter-bar { display: flex; gap: 12px; align-items: center; margin-bottom: 16px; flex-wrap: wrap; }
+        .filter-bar label { font-size: 0.9em; font-weight: 600; color: #555; }
+        .filter-bar select, .filter-bar input { padding: 6px 10px; border: 1px solid #ccc; border-radius: 5px; font-family: 'Open Sans', sans-serif; font-size: 0.9em; }
+
+        .notes-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+        .note-card { background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 16px; box-shadow: 0 2px 6px rgba(0,0,0,0.06); transition: box-shadow 0.2s; display: flex; flex-direction: column; }
+        .note-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
+        .note-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; gap: 8px; }
+        .note-title { font-weight: 600; font-size: 1em; color: #2c3e50; flex: 1; }
+        .note-body { font-size: 0.88em; color: #555; line-height: 1.6; flex: 1; white-space: pre-wrap; word-break: break-word; max-height: 120px; overflow: hidden; position: relative; }
+        .note-body.expanded { max-height: none; }
+        .note-footer { margin-top: 10px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; }
+        .note-date { font-size: 0.78em; color: #95a5a6; }
+        .note-actions { display: flex; gap: 6px; }
+
+        .cat-badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.75em; font-weight: 600; text-transform: uppercase; white-space: nowrap; }
+        .cat-work     { background: #d6eaf8; color: #1a5276; }
+        .cat-personal { background: #d5f5e3; color: #1d6a3a; }
+        .cat-finance  { background: #fdebd0; color: #784212; }
+        .cat-health   { background: #f9ebea; color: #7b241c; }
+        .cat-other    { background: #eaecee; color: #2c3e50; }
+
+        .empty-state { text-align: center; padding: 40px; color: #95a5a6; font-size: 1em; }
+
+        @media (max-width: 600px) { .form-row { grid-template-columns: 1fr; } .notes-grid { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+<nav class="site-nav">
+    <a href="main.html">&#128100; Profile</a>
+    <a href="investment.html">&#128200; Investment</a>
+    <a href="expense.html">&#128176; Expense</a>
+    <a href="notes.html" class="active">&#128221; Notes</a>
+    <a href="tasks.html">&#9989; Tasks</a>
+</nav>
+
+<div class="container">
+    <h1>Notes</h1>
+
+    <div class="form-section">
+        <h2 id="formTitle">Add Note</h2>
+        <input type="hidden" id="editId">
+        <div class="form-row">
+            <div class="form-group">
+                <label>Title *</label>
+                <input type="text" id="noteTitle" placeholder="Note title...">
+            </div>
+            <div class="form-group">
+                <label>Category</label>
+                <select id="noteCategory">
+                    <option value="work">Work</option>
+                    <option value="personal">Personal</option>
+                    <option value="finance">Finance</option>
+                    <option value="health">Health</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Date</label>
+                <input type="date" id="noteDate">
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Content *</label>
+            <textarea id="noteContent" placeholder="Write your note here..."></textarea>
+        </div>
+        <div class="form-actions">
+            <button class="btn btn-primary" onclick="saveNote()">Save</button>
+            <button class="btn btn-cancel" id="cancelBtn" onclick="cancelEdit()" style="display:none;">Cancel</button>
+            <span id="formError" style="color:#e74c3c; font-size:0.88em;"></span>
+        </div>
+    </div>
+
+    <div class="section-header">All Notes <span id="noteCount" style="font-size:0.75em; color:#7f8c8d; font-family:'Open Sans',sans-serif; font-weight:400;"></span></div>
+
+    <div class="filter-bar">
+        <label>Category:</label>
+        <select id="filterCat" onchange="render()">
+            <option value="">All</option>
+            <option value="work">Work</option>
+            <option value="personal">Personal</option>
+            <option value="finance">Finance</option>
+            <option value="health">Health</option>
+            <option value="other">Other</option>
+        </select>
+        <input type="text" id="filterSearch" placeholder="Search notes..." oninput="render()">
+    </div>
+
+    <div class="notes-grid" id="notesGrid"></div>
+    <div id="emptyState" class="empty-state" style="display:none;">No notes yet. Add your first note above!</div>
+</div>
+
+<script>
+const KEY = 'rukphong_notes';
+const CAT_LABELS = {work:'Work', personal:'Personal', finance:'Finance', health:'Health', other:'Other'};
+
+function load() { return JSON.parse(localStorage.getItem(KEY) || '[]'); }
+function save(d) { localStorage.setItem(KEY, JSON.stringify(d)); }
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function render() {
+    const data = load();
+    const fc = document.getElementById('filterCat').value;
+    const fs = document.getElementById('filterSearch').value.toLowerCase();
+    let rows = data.filter(n =>
+        (!fc || n.category === fc) &&
+        (!fs || n.title.toLowerCase().includes(fs) || n.content.toLowerCase().includes(fs))
+    ).sort((a,b) => (b.date||b.id) > (a.date||a.id) ? 1 : -1);
+
+    document.getElementById('noteCount').textContent = `(${rows.length})`;
+    const grid = document.getElementById('notesGrid');
+    grid.innerHTML = '';
+    rows.forEach(n => {
+        const div = document.createElement('div');
+        div.className = 'note-card';
+        div.innerHTML = `
+            <div class="note-card-header">
+                <div class="note-title">${esc(n.title)}</div>
+                <span class="cat-badge cat-${n.category}">${CAT_LABELS[n.category]||n.category}</span>
+            </div>
+            <div class="note-body">${esc(n.content)}</div>
+            <div class="note-footer">
+                <span class="note-date">${n.date || ''}</span>
+                <div class="note-actions">
+                    <button class="btn btn-edit" onclick="editNote('${n.id}')">Edit</button>
+                    <button class="btn btn-danger" onclick="deleteNote('${n.id}')">Del</button>
+                </div>
+            </div>`;
+        grid.appendChild(div);
+    });
+    document.getElementById('emptyState').style.display = rows.length === 0 ? 'block' : 'none';
+}
+
+function saveNote() {
+    const id      = document.getElementById('editId').value;
+    const title   = document.getElementById('noteTitle').value.trim();
+    const content = document.getElementById('noteContent').value.trim();
+    const cat     = document.getElementById('noteCategory').value;
+    const date    = document.getElementById('noteDate').value;
+    const errEl   = document.getElementById('formError');
+    if (!title)   { errEl.textContent = 'Title is required.'; return; }
+    if (!content) { errEl.textContent = 'Content is required.'; return; }
+    errEl.textContent = '';
+    const data = load();
+    if (id) {
+        const idx = data.findIndex(n => n.id === id);
+        if (idx !== -1) data[idx] = {...data[idx], title, content, category: cat, date};
+    } else {
+        data.push({id: Date.now().toString(), title, content, category: cat, date});
+    }
+    save(data); clearForm(); render();
+}
+
+function editNote(id) {
+    const n = load().find(x => x.id === id); if (!n) return;
+    document.getElementById('editId').value = id;
+    document.getElementById('noteTitle').value = n.title;
+    document.getElementById('noteContent').value = n.content;
+    document.getElementById('noteCategory').value = n.category || 'other';
+    document.getElementById('noteDate').value = n.date || '';
+    document.getElementById('formTitle').textContent = 'Edit Note';
+    document.getElementById('cancelBtn').style.display = 'inline-block';
+    document.querySelector('.form-section').scrollIntoView({behavior:'smooth'});
+}
+
+function deleteNote(id) {
+    if (!confirm('Delete this note?')) return;
+    save(load().filter(n => n.id !== id)); render();
+}
+
+function cancelEdit() { clearForm(); }
+function clearForm() {
+    ['editId','noteTitle','noteContent','noteDate'].forEach(id => { document.getElementById(id).value = ''; });
+    document.getElementById('noteCategory').value = 'work';
+    document.getElementById('formTitle').textContent = 'Add Note';
+    document.getElementById('cancelBtn').style.display = 'none';
+    document.getElementById('formError').textContent = '';
+}
+
+// Set today's date as default
+document.getElementById('noteDate').value = new Date().toISOString().slice(0,10);
+render();
+</script>
+</body>
+</html>
