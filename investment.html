@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Investment Tracker - Rukphong Pullaoy</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600&family=Roboto+Slab:wght@400;700&display=swap');
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: 'Open Sans', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #eaeaea;
+            color: #333;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 1100px;
+            margin: 30px auto;
+            padding: 20px;
+            background-color: #fff;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            border-radius: 10px;
+        }
+
+        h1 {
+            font-family: 'Roboto Slab', serif;
+            color: #2c3e50;
+            text-align: center;
+            font-size: 2.2em;
+            margin-bottom: 5px;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: #2980b9;
+            text-decoration: none;
+            font-size: 0.95em;
+        }
+        .back-link:hover { text-decoration: underline; }
+
+        /* Summary cards */
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            margin: 25px 0;
+        }
+
+        .card {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 18px;
+            text-align: center;
+            border-left: 4px solid #2980b9;
+        }
+        .card.gain  { border-left-color: #27ae60; }
+        .card.loss  { border-left-color: #e74c3c; }
+
+        .card .label {
+            font-size: 0.82em;
+            color: #7f8c8d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .card .value {
+            font-size: 1.6em;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-top: 6px;
+        }
+        .card.gain .value { color: #27ae60; }
+        .card.loss .value { color: #e74c3c; }
+
+        /* Form */
+        .form-section {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        .form-section h2 {
+            font-family: 'Roboto Slab', serif;
+            color: #2980b9;
+            font-size: 1.4em;
+            margin: 0 0 15px 0;
+            border-bottom: 2px solid #ddd;
+            padding-bottom: 8px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            font-size: 0.85em;
+            font-weight: 600;
+            color: #555;
+            margin-bottom: 4px;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            padding: 8px 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-family: 'Open Sans', sans-serif;
+            font-size: 0.95em;
+            color: #333;
+        }
+        .form-group textarea { resize: vertical; min-height: 60px; }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #2980b9;
+        }
+
+        .form-actions {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .btn {
+            padding: 9px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: 'Open Sans', sans-serif;
+            font-size: 0.95em;
+            font-weight: 600;
+            transition: opacity 0.15s;
+        }
+        .btn:hover { opacity: 0.85; }
+        .btn-primary { background: #2980b9; color: #fff; }
+        .btn-danger  { background: #e74c3c; color: #fff; padding: 5px 12px; font-size: 0.85em; }
+        .btn-edit    { background: #f39c12; color: #fff; padding: 5px 12px; font-size: 0.85em; }
+        .btn-cancel  { background: #95a5a6; color: #fff; }
+
+        /* Filter bar */
+        .filter-bar {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        .filter-bar label { font-size: 0.9em; font-weight: 600; color: #555; }
+        .filter-bar select, .filter-bar input {
+            padding: 6px 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-family: 'Open Sans', sans-serif;
+            font-size: 0.9em;
+        }
+
+        /* Table */
+        .table-wrapper { overflow-x: auto; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.92em;
+        }
+
+        thead th {
+            background: #2980b9;
+            color: #fff;
+            padding: 10px 12px;
+            text-align: left;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        thead th:hover { background: #2471a3; }
+        thead th .sort-arrow { margin-left: 4px; opacity: 0.6; }
+
+        tbody tr:nth-child(even) { background: #f4f8fb; }
+        tbody tr:hover { background: #ebf5fb; }
+
+        td {
+            padding: 9px 12px;
+            border-bottom: 1px solid #eee;
+            vertical-align: middle;
+        }
+
+        .type-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.78em;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        .type-stocks   { background: #d6eaf8; color: #1a5276; }
+        .type-bonds    { background: #d5f5e3; color: #1d6a3a; }
+        .type-crypto   { background: #fdebd0; color: #784212; }
+        .type-realestate { background: #f9ebea; color: #7b241c; }
+        .type-fund     { background: #e8daef; color: #512e5f; }
+        .type-gold     { background: #fef9e7; color: #7d6608; border: 1px solid #f9e79f; }
+        .type-other    { background: #eaecee; color: #2c3e50; }
+
+        .positive { color: #27ae60; font-weight: 600; }
+        .negative { color: #e74c3c; font-weight: 600; }
+        .neutral  { color: #7f8c8d; }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #95a5a6;
+            font-size: 1.1em;
+        }
+
+        .section-header {
+            font-family: 'Roboto Slab', serif;
+            color: #2c3e50;
+            font-size: 1.4em;
+            margin: 30px 0 15px 0;
+            border-bottom: 2px solid #ddd;
+            padding-bottom: 8px;
+        }
+
+        @media (max-width: 600px) {
+            .summary-grid { grid-template-columns: 1fr 1fr; }
+            .form-grid    { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <a href="main.html" class="back-link">&#8592; Back to Profile</a>
+    <h1>Investment Tracker</h1>
+
+    <!-- Summary Cards -->
+    <div class="summary-grid" id="summaryGrid">
+        <div class="card">
+            <div class="label">Total Invested</div>
+            <div class="value" id="totalInvested">0.00</div>
+        </div>
+        <div class="card">
+            <div class="label">Current Value</div>
+            <div class="value" id="currentValue">0.00</div>
+        </div>
+        <div class="card" id="plCard">
+            <div class="label">Gain / Loss</div>
+            <div class="value" id="totalPL">0.00</div>
+        </div>
+        <div class="card" id="pctCard">
+            <div class="label">Return %</div>
+            <div class="value" id="totalPct">0.00%</div>
+        </div>
+        <div class="card">
+            <div class="label">Positions</div>
+            <div class="value" id="totalPositions">0</div>
+        </div>
+    </div>
+
+    <!-- Add / Edit Form -->
+    <div class="form-section">
+        <h2 id="formTitle">Add Investment</h2>
+        <input type="hidden" id="editId" value="">
+        <div class="form-grid">
+            <div class="form-group">
+                <label for="assetName">Asset Name *</label>
+                <input type="text" id="assetName" placeholder="e.g. Apple, Bitcoin, SET50">
+            </div>
+            <div class="form-group">
+                <label for="assetType">Type *</label>
+                <select id="assetType">
+                    <option value="stocks">Stocks</option>
+                    <option value="bonds">Bonds</option>
+                    <option value="crypto">Crypto</option>
+                    <option value="realestate">Real Estate</option>
+                    <option value="fund">Fund / ETF</option>
+                    <option value="gold">Gold</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="currency">Currency</label>
+                <select id="currency">
+                    <option value="THB">THB (฿)</option>
+                    <option value="USD">USD ($)</option>
+                    <option value="EUR">EUR (€)</option>
+                    <option value="JPY">JPY (¥)</option>
+                    <option value="SGD">SGD (S$)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="amountInvested">Amount Invested *</label>
+                <input type="number" id="amountInvested" placeholder="0.00" min="0" step="0.01">
+            </div>
+            <div class="form-group">
+                <label for="currentVal">Current Value</label>
+                <input type="number" id="currentVal" placeholder="0.00" min="0" step="0.01">
+            </div>
+            <div class="form-group">
+                <label for="purchaseDate">Purchase Date</label>
+                <input type="date" id="purchaseDate">
+            </div>
+            <div class="form-group" style="grid-column: span 2;">
+                <label for="notes">Notes</label>
+                <textarea id="notes" placeholder="Optional notes about this investment..."></textarea>
+            </div>
+        </div>
+        <div class="form-actions">
+            <button class="btn btn-primary" onclick="saveInvestment()">Save</button>
+            <button class="btn btn-cancel" id="cancelBtn" onclick="cancelEdit()" style="display:none;">Cancel</button>
+            <span id="formError" style="color:#e74c3c; font-size:0.9em;"></span>
+        </div>
+    </div>
+
+    <!-- Investment Table -->
+    <h2 class="section-header">Portfolio</h2>
+
+    <div class="filter-bar">
+        <label>Filter:</label>
+        <select id="filterType" onchange="renderTable()">
+            <option value="">All Types</option>
+            <option value="stocks">Stocks</option>
+            <option value="bonds">Bonds</option>
+            <option value="crypto">Crypto</option>
+            <option value="realestate">Real Estate</option>
+            <option value="fund">Fund / ETF</option>
+            <option value="gold">Gold</option>
+            <option value="other">Other</option>
+        </select>
+        <input type="text" id="filterSearch" placeholder="Search asset name..." oninput="renderTable()">
+    </div>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th onclick="sortBy('name')">Asset <span class="sort-arrow" id="sort-name"></span></th>
+                    <th onclick="sortBy('type')">Type <span class="sort-arrow" id="sort-type"></span></th>
+                    <th onclick="sortBy('currency')">Ccy <span class="sort-arrow" id="sort-currency"></span></th>
+                    <th onclick="sortBy('invested')">Invested <span class="sort-arrow" id="sort-invested"></span></th>
+                    <th onclick="sortBy('current')">Current Value <span class="sort-arrow" id="sort-current"></span></th>
+                    <th onclick="sortBy('pl')">Gain / Loss <span class="sort-arrow" id="sort-pl"></span></th>
+                    <th onclick="sortBy('pct')">Return % <span class="sort-arrow" id="sort-pct"></span></th>
+                    <th onclick="sortBy('date')">Date <span class="sort-arrow" id="sort-date"></span></th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="investmentTableBody"></tbody>
+        </table>
+    </div>
+    <div id="emptyState" class="empty-state" style="display:none;">
+        No investments recorded yet. Add your first one above!
+    </div>
+</div>
+
+<script>
+    const STORAGE_KEY = 'rukphong_investments';
+    let sortField = 'date';
+    let sortAsc = false;
+
+    function load() {
+        return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    }
+
+    function save(data) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    }
+
+    function fmtNum(n) {
+        return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function currSymbol(c) {
+        const map = { THB: '฿', USD: '$', EUR: '€', JPY: '¥', SGD: 'S$' };
+        return map[c] || c;
+    }
+
+    function updateSummary() {
+        const data = load();
+        let totalInv = 0, totalCur = 0;
+        data.forEach(d => {
+            totalInv += parseFloat(d.invested) || 0;
+            totalCur += parseFloat(d.current) || parseFloat(d.invested) || 0;
+        });
+        const pl = totalCur - totalInv;
+        const pct = totalInv > 0 ? (pl / totalInv) * 100 : 0;
+
+        document.getElementById('totalInvested').textContent = fmtNum(totalInv);
+        document.getElementById('currentValue').textContent = fmtNum(totalCur);
+        document.getElementById('totalPL').textContent = (pl >= 0 ? '+' : '') + fmtNum(pl);
+        document.getElementById('totalPct').textContent = (pct >= 0 ? '+' : '') + pct.toFixed(2) + '%';
+        document.getElementById('totalPositions').textContent = data.length;
+
+        const plCard  = document.getElementById('plCard');
+        const pctCard = document.getElementById('pctCard');
+        plCard.className  = 'card ' + (pl >= 0 ? 'gain' : 'loss');
+        pctCard.className = 'card ' + (pct >= 0 ? 'gain' : 'loss');
+    }
+
+    function renderTable() {
+        const data = load();
+        const filterType   = document.getElementById('filterType').value;
+        const filterSearch = document.getElementById('filterSearch').value.toLowerCase();
+
+        let rows = data.filter(d => {
+            const matchType   = !filterType   || d.type === filterType;
+            const matchSearch = !filterSearch || d.name.toLowerCase().includes(filterSearch);
+            return matchType && matchSearch;
+        });
+
+        rows.sort((a, b) => {
+            let va, vb;
+            if (sortField === 'name')     { va = a.name.toLowerCase(); vb = b.name.toLowerCase(); }
+            else if (sortField === 'type')     { va = a.type; vb = b.type; }
+            else if (sortField === 'currency') { va = a.currency; vb = b.currency; }
+            else if (sortField === 'invested') { va = parseFloat(a.invested); vb = parseFloat(b.invested); }
+            else if (sortField === 'current')  { va = parseFloat(a.current||a.invested); vb = parseFloat(b.current||b.invested); }
+            else if (sortField === 'pl')  {
+                va = (parseFloat(a.current||a.invested)) - parseFloat(a.invested);
+                vb = (parseFloat(b.current||b.invested)) - parseFloat(b.invested);
+            }
+            else if (sortField === 'pct') {
+                const ia = parseFloat(a.invested)||0;
+                const ib = parseFloat(b.invested)||0;
+                va = ia > 0 ? ((parseFloat(a.current||a.invested)-ia)/ia)*100 : 0;
+                vb = ib > 0 ? ((parseFloat(b.current||b.invested)-ib)/ib)*100 : 0;
+            }
+            else { va = a.date || ''; vb = b.date || ''; }
+
+            if (va < vb) return sortAsc ? -1 : 1;
+            if (va > vb) return sortAsc ?  1 : -1;
+            return 0;
+        });
+
+        const tbody = document.getElementById('investmentTableBody');
+        tbody.innerHTML = '';
+
+        rows.forEach(inv => {
+            const inv_amt = parseFloat(inv.invested) || 0;
+            const cur_amt = parseFloat(inv.current != null && inv.current !== '' ? inv.current : inv.invested) || 0;
+            const pl      = cur_amt - inv_amt;
+            const pct     = inv_amt > 0 ? (pl / inv_amt) * 100 : 0;
+            const sym     = currSymbol(inv.currency || 'THB');
+            const plCls   = pl > 0 ? 'positive' : pl < 0 ? 'negative' : 'neutral';
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><strong>${escHtml(inv.name)}</strong>${inv.notes ? '<br><small style="color:#999">' + escHtml(inv.notes) + '</small>' : ''}</td>
+                <td><span class="type-badge type-${inv.type}">${typeLabel(inv.type)}</span></td>
+                <td>${escHtml(inv.currency || 'THB')}</td>
+                <td>${sym}${fmtNum(inv_amt)}</td>
+                <td>${sym}${fmtNum(cur_amt)}</td>
+                <td class="${plCls}">${pl >= 0 ? '+' : ''}${sym}${fmtNum(pl)}</td>
+                <td class="${plCls}">${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%</td>
+                <td>${inv.date || '-'}</td>
+                <td>
+                    <button class="btn btn-edit" onclick="editInvestment('${inv.id}')">Edit</button>
+                    <button class="btn btn-danger" onclick="deleteInvestment('${inv.id}')">Del</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        document.getElementById('emptyState').style.display = rows.length === 0 ? 'block' : 'none';
+    }
+
+    function typeLabel(t) {
+        const map = { stocks:'Stocks', bonds:'Bonds', crypto:'Crypto', realestate:'Real Estate', fund:'Fund/ETF', gold:'Gold', other:'Other' };
+        return map[t] || t;
+    }
+
+    function escHtml(s) {
+        return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function sortBy(field) {
+        if (sortField === field) sortAsc = !sortAsc;
+        else { sortField = field; sortAsc = true; }
+
+        document.querySelectorAll('.sort-arrow').forEach(el => el.textContent = '');
+        const arrow = document.getElementById('sort-' + field);
+        if (arrow) arrow.textContent = sortAsc ? '▲' : '▼';
+
+        renderTable();
+    }
+
+    function saveInvestment() {
+        const id   = document.getElementById('editId').value;
+        const name = document.getElementById('assetName').value.trim();
+        const type = document.getElementById('assetType').value;
+        const currency = document.getElementById('currency').value;
+        const invested = document.getElementById('amountInvested').value;
+        const current  = document.getElementById('currentVal').value;
+        const date     = document.getElementById('purchaseDate').value;
+        const notes    = document.getElementById('notes').value.trim();
+
+        const errEl = document.getElementById('formError');
+        if (!name) { errEl.textContent = 'Asset name is required.'; return; }
+        if (!invested || parseFloat(invested) < 0) { errEl.textContent = 'Enter a valid invested amount.'; return; }
+        errEl.textContent = '';
+
+        const data = load();
+        if (id) {
+            const idx = data.findIndex(d => d.id === id);
+            if (idx !== -1) {
+                data[idx] = { ...data[idx], name, type, currency, invested, current, date, notes };
+            }
+        } else {
+            data.push({ id: Date.now().toString(), name, type, currency, invested, current, date, notes });
+        }
+
+        save(data);
+        clearForm();
+        updateSummary();
+        renderTable();
+    }
+
+    function editInvestment(id) {
+        const data = load();
+        const inv  = data.find(d => d.id === id);
+        if (!inv) return;
+
+        document.getElementById('editId').value = id;
+        document.getElementById('assetName').value = inv.name;
+        document.getElementById('assetType').value = inv.type;
+        document.getElementById('currency').value = inv.currency || 'THB';
+        document.getElementById('amountInvested').value = inv.invested;
+        document.getElementById('currentVal').value = inv.current || '';
+        document.getElementById('purchaseDate').value = inv.date || '';
+        document.getElementById('notes').value = inv.notes || '';
+        document.getElementById('formTitle').textContent = 'Edit Investment';
+        document.getElementById('cancelBtn').style.display = 'inline-block';
+
+        document.querySelector('.form-section').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function deleteInvestment(id) {
+        if (!confirm('Delete this investment record?')) return;
+        const data = load().filter(d => d.id !== id);
+        save(data);
+        updateSummary();
+        renderTable();
+    }
+
+    function cancelEdit() {
+        clearForm();
+    }
+
+    function clearForm() {
+        document.getElementById('editId').value = '';
+        document.getElementById('assetName').value = '';
+        document.getElementById('assetType').value = 'stocks';
+        document.getElementById('currency').value = 'THB';
+        document.getElementById('amountInvested').value = '';
+        document.getElementById('currentVal').value = '';
+        document.getElementById('purchaseDate').value = '';
+        document.getElementById('notes').value = '';
+        document.getElementById('formTitle').textContent = 'Add Investment';
+        document.getElementById('cancelBtn').style.display = 'none';
+        document.getElementById('formError').textContent = '';
+    }
+
+    // Init
+    updateSummary();
+    renderTable();
+    sortBy('date');
+</script>
+</body>
+</html>
