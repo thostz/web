@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Expense Tracker - Rukphong Pullaoy</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600&family=Roboto+Slab:wght@400;700&display=swap');
+        * { box-sizing: border-box; }
+        body { font-family: 'Open Sans', sans-serif; margin: 0; padding: 0; background: #eaeaea; color: #333; }
+
+        .site-nav { background: #2c3e50; display: flex; flex-wrap: wrap; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 6px rgba(0,0,0,0.25); }
+        .site-nav a { color: #ecf0f1; text-decoration: none; padding: 12px 18px; font-size: 0.9em; font-weight: 600; font-family: 'Open Sans', sans-serif; transition: background 0.15s; }
+        .site-nav a:hover, .site-nav a.active { background: #2980b9; }
+
+        .container { width: 90%; max-width: 1100px; margin: 30px auto; padding: 20px; background: #fff; box-shadow: 0 0 20px rgba(0,0,0,0.1); border-radius: 10px; }
+        h1 { font-family: 'Roboto Slab', serif; color: #2c3e50; text-align: center; font-size: 2.2em; margin-bottom: 20px; }
+
+        .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(155px, 1fr)); gap: 12px; margin: 20px 0; }
+        .card { background: #f8f9fa; border-radius: 8px; padding: 16px; text-align: center; border-left: 4px solid #2980b9; }
+        .card.warn { border-left-color: #e74c3c; }
+        .card.ok   { border-left-color: #27ae60; }
+        .card .label { font-size: 0.78em; color: #7f8c8d; text-transform: uppercase; letter-spacing: 0.5px; }
+        .card .value { font-size: 1.45em; font-weight: 600; color: #2c3e50; margin-top: 6px; }
+
+        .chart-box { background: #f8f9fa; border-radius: 8px; padding: 16px; margin: 20px 0; }
+        .chart-box h3 { font-family: 'Roboto Slab', serif; color: #2980b9; font-size: 1.05em; margin: 0 0 12px 0; text-align: center; }
+        .chart-box canvas { max-height: 260px; }
+
+        .section-header { font-family: 'Roboto Slab', serif; color: #2c3e50; font-size: 1.35em; margin: 28px 0 14px 0; border-bottom: 2px solid #ddd; padding-bottom: 8px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+
+        .form-section { background: #f8f9fa; border-radius: 8px; padding: 18px; margin-bottom: 18px; }
+        .form-section h2 { font-family: 'Roboto Slab', serif; color: #2980b9; font-size: 1.25em; margin: 0 0 14px 0; border-bottom: 2px solid #ddd; padding-bottom: 7px; }
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 11px; }
+        .form-group { display: flex; flex-direction: column; }
+        .form-group label { font-size: 0.84em; font-weight: 600; color: #555; margin-bottom: 4px; }
+        .form-group input, .form-group select, .form-group textarea { padding: 7px 10px; border: 1px solid #ccc; border-radius: 5px; font-family: 'Open Sans', sans-serif; font-size: 0.92em; color: #333; }
+        .form-group textarea { resize: vertical; min-height: 52px; }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: #2980b9; }
+        .form-actions { margin-top: 13px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+
+        .btn { padding: 8px 17px; border: none; border-radius: 5px; cursor: pointer; font-family: 'Open Sans', sans-serif; font-size: 0.92em; font-weight: 600; transition: opacity 0.15s; }
+        .btn:hover { opacity: 0.83; }
+        .btn-primary { background: #2980b9; color: #fff; }
+        .btn-success { background: #27ae60; color: #fff; }
+        .btn-danger  { background: #e74c3c; color: #fff; padding: 4px 10px; font-size: 0.82em; }
+        .btn-edit    { background: #f39c12; color: #fff; padding: 4px 10px; font-size: 0.82em; }
+        .btn-cancel  { background: #95a5a6; color: #fff; }
+        .btn-sm      { padding: 5px 11px; font-size: 0.82em; }
+
+        .filter-bar { display: flex; gap: 12px; align-items: center; margin-bottom: 11px; flex-wrap: wrap; }
+        .filter-bar label { font-size: 0.9em; font-weight: 600; color: #555; }
+        .filter-bar select, .filter-bar input { padding: 6px 10px; border: 1px solid #ccc; border-radius: 5px; font-family: 'Open Sans', sans-serif; font-size: 0.9em; }
+
+        .table-wrapper { overflow-x: auto; margin-bottom: 8px; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.9em; }
+        thead th { background: #2980b9; color: #fff; padding: 9px 11px; text-align: left; font-weight: 600; cursor: pointer; white-space: nowrap; }
+        thead th:hover { background: #2471a3; }
+        thead th .sa { margin-left: 4px; opacity: 0.6; }
+        tbody tr:nth-child(even) { background: #f4f8fb; }
+        tbody tr:hover { background: #ebf5fb; }
+        td { padding: 8px 11px; border-bottom: 1px solid #eee; vertical-align: middle; }
+
+        .cat-badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.75em; font-weight: 600; text-transform: uppercase; }
+        .cat-food          { background: #fdebd0; color: #784212; }
+        .cat-transport     { background: #d6eaf8; color: #1a5276; }
+        .cat-housing       { background: #d5f5e3; color: #1d6a3a; }
+        .cat-shopping      { background: #e8daef; color: #512e5f; }
+        .cat-health        { background: #f9ebea; color: #7b241c; }
+        .cat-entertainment { background: #fef9e7; color: #7d6608; border: 1px solid #f9e79f; }
+        .cat-other         { background: #eaecee; color: #2c3e50; }
+
+        .empty-state { text-align: center; padding: 32px; color: #95a5a6; font-size: 1em; }
+
+        @media (max-width: 700px) { .summary-grid { grid-template-columns: 1fr 1fr; } .form-grid { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+<nav class="site-nav">
+    <a href="main.html">&#128100; Profile</a>
+    <a href="investment.html">&#128200; Investment</a>
+    <a href="expense.html" class="active">&#128176; Expense</a>
+    <a href="notes.html">&#128221; Notes</a>
+    <a href="tasks.html">&#9989; Tasks</a>
+</nav>
+
+<div class="container">
+    <h1>Expense Tracker</h1>
+
+    <div class="summary-grid">
+        <div class="card"><div class="label">This Month</div><div class="value" id="sumMonth">0.00</div></div>
+        <div class="card"><div class="label">This Year</div><div class="value" id="sumYear">0.00</div></div>
+        <div class="card"><div class="label">All Time</div><div class="value" id="sumAll">0.00</div></div>
+        <div class="card"><div class="label">Transactions</div><div class="value" id="sumCount">0</div></div>
+        <div class="card"><div class="label">Top Category</div><div class="value" id="sumTop" style="font-size:1em;">-</div></div>
+    </div>
+
+    <div class="chart-box">
+        <h3>Spending by Category</h3>
+        <canvas id="catChart"></canvas>
+    </div>
+
+    <div class="section-header">
+        Add Expense
+    </div>
+    <div class="form-section">
+        <h2 id="formTitle">New Expense</h2>
+        <input type="hidden" id="editId">
+        <div class="form-grid">
+            <div class="form-group">
+                <label>Description *</label>
+                <input type="text" id="expDesc" placeholder="e.g. Lunch, Grab taxi...">
+            </div>
+            <div class="form-group">
+                <label>Category *</label>
+                <select id="expCat">
+                    <option value="food">Food</option>
+                    <option value="transport">Transport</option>
+                    <option value="housing">Housing</option>
+                    <option value="shopping">Shopping</option>
+                    <option value="health">Health</option>
+                    <option value="entertainment">Entertainment</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Currency</label>
+                <select id="expCurrency">
+                    <option value="THB">THB (฿)</option>
+                    <option value="USD">USD ($)</option>
+                    <option value="EUR">EUR (€)</option>
+                    <option value="JPY">JPY (¥)</option>
+                    <option value="SGD">SGD (S$)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Amount *</label>
+                <input type="number" id="expAmount" placeholder="0.00" min="0" step="0.01">
+            </div>
+            <div class="form-group">
+                <label>Date *</label>
+                <input type="date" id="expDate">
+            </div>
+            <div class="form-group" style="grid-column: span 2;">
+                <label>Notes</label>
+                <textarea id="expNotes" placeholder="Optional notes..."></textarea>
+            </div>
+        </div>
+        <div class="form-actions">
+            <button class="btn btn-primary" onclick="saveExpense()">Save</button>
+            <button class="btn btn-cancel" id="cancelBtn" onclick="cancelEdit()" style="display:none;">Cancel</button>
+            <button class="btn btn-success btn-sm" onclick="exportCSV()" style="margin-left:auto;">&#8595; Export CSV</button>
+            <span id="formError" style="color:#e74c3c; font-size:0.88em;"></span>
+        </div>
+    </div>
+
+    <div class="section-header">Expenses</div>
+    <div class="filter-bar">
+        <label>Category:</label>
+        <select id="filterCat" onchange="render()">
+            <option value="">All</option>
+            <option value="food">Food</option>
+            <option value="transport">Transport</option>
+            <option value="housing">Housing</option>
+            <option value="shopping">Shopping</option>
+            <option value="health">Health</option>
+            <option value="entertainment">Entertainment</option>
+            <option value="other">Other</option>
+        </select>
+        <label>Month:</label>
+        <input type="month" id="filterMonth" oninput="render()">
+        <input type="text" id="filterSearch" placeholder="Search..." oninput="render()">
+    </div>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th onclick="sortBy('date')">Date <span class="sa" id="s-date"></span></th>
+                    <th onclick="sortBy('desc')">Description <span class="sa" id="s-desc"></span></th>
+                    <th onclick="sortBy('cat')">Category <span class="sa" id="s-cat"></span></th>
+                    <th onclick="sortBy('amount')">Amount <span class="sa" id="s-amount"></span></th>
+                    <th>Currency</th>
+                    <th>Notes</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="expenseTableBody"></tbody>
+        </table>
+    </div>
+    <div id="emptyState" class="empty-state" style="display:none;">No expenses yet. Add one above!</div>
+</div>
+
+<script>
+const KEY = 'rukphong_expenses';
+const CATS = ['food','transport','housing','shopping','health','entertainment','other'];
+const CAT_LABELS = {food:'Food',transport:'Transport',housing:'Housing',shopping:'Shopping',health:'Health',entertainment:'Entertainment',other:'Other'};
+const CAT_COLORS = {food:'#e67e22',transport:'#2980b9',housing:'#27ae60',shopping:'#8e44ad',health:'#e74c3c',entertainment:'#f1c40f',other:'#95a5a6'};
+
+let sortField = 'date', sortAsc = false;
+let catChart = null;
+
+function load() { return JSON.parse(localStorage.getItem(KEY) || '[]'); }
+function save(d) { localStorage.setItem(KEY, JSON.stringify(d)); }
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function sym(c) { return {THB:'฿',USD:'$',EUR:'€',JPY:'¥',SGD:'S$'}[c]||c; }
+function fmtNum(n) { return n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+
+function updateSummary() {
+    const data = load();
+    const now = new Date(), thisMonth = now.toISOString().slice(0,7), thisYear = now.getFullYear().toString();
+    let month=0, year=0, all=0;
+    const byCat = {};
+    data.forEach(e => {
+        const a = parseFloat(e.amount)||0;
+        all += a;
+        if ((e.date||'').startsWith(thisYear)) year += a;
+        if ((e.date||'').startsWith(thisMonth)) month += a;
+        byCat[e.category] = (byCat[e.category]||0) + a;
+    });
+    document.getElementById('sumMonth').textContent = fmtNum(month);
+    document.getElementById('sumYear').textContent  = fmtNum(year);
+    document.getElementById('sumAll').textContent   = fmtNum(all);
+    document.getElementById('sumCount').textContent = data.length;
+    const topCat = Object.entries(byCat).sort((a,b)=>b[1]-a[1])[0];
+    document.getElementById('sumTop').textContent = topCat ? CAT_LABELS[topCat[0]] : '-';
+    updateChart(byCat);
+}
+
+function updateChart(byCat) {
+    const active = CATS.filter(c => byCat[c] > 0);
+    if (catChart) catChart.destroy();
+    catChart = new Chart(document.getElementById('catChart').getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: active.map(c => CAT_LABELS[c]),
+            datasets: [{ label:'Total Spent', data: active.map(c=>byCat[c]||0), backgroundColor: active.map(c=>CAT_COLORS[c]+'cc'), borderColor: active.map(c=>CAT_COLORS[c]), borderWidth:1 }]
+        },
+        options: { plugins:{ legend:{display:false} }, scales:{ y:{beginAtZero:true, ticks:{font:{size:10}}}, x:{ticks:{font:{size:10}}} } }
+    });
+}
+
+function render() {
+    const data = load();
+    const fc = document.getElementById('filterCat').value;
+    const fm = document.getElementById('filterMonth').value;
+    const fs = document.getElementById('filterSearch').value.toLowerCase();
+    let rows = data.filter(e =>
+        (!fc || e.category===fc) &&
+        (!fm || (e.date||'').startsWith(fm)) &&
+        (!fs || e.description.toLowerCase().includes(fs) || (e.notes||'').toLowerCase().includes(fs))
+    );
+    rows.sort((a,b) => {
+        let va, vb;
+        if      (sortField==='date')   { va=a.date||''; vb=b.date||''; }
+        else if (sortField==='desc')   { va=a.description.toLowerCase(); vb=b.description.toLowerCase(); }
+        else if (sortField==='cat')    { va=a.category; vb=b.category; }
+        else if (sortField==='amount') { va=parseFloat(a.amount)||0; vb=parseFloat(b.amount)||0; }
+        else { va=''; vb=''; }
+        return (va<vb?-1:va>vb?1:0) * (sortAsc?1:-1);
+    });
+    const tbody = document.getElementById('expenseTableBody');
+    tbody.innerHTML = '';
+    rows.forEach(e => {
+        const s = sym(e.currency||'THB'), tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${e.date||'-'}</td>
+            <td><strong>${esc(e.description)}</strong></td>
+            <td><span class="cat-badge cat-${e.category}">${CAT_LABELS[e.category]||e.category}</span></td>
+            <td><strong>${s}${fmtNum(parseFloat(e.amount)||0)}</strong></td>
+            <td>${esc(e.currency||'THB')}</td>
+            <td>${e.notes?esc(e.notes):'-'}</td>
+            <td>
+                <button class="btn btn-edit" onclick="editExpense('${e.id}')">Edit</button>
+                <button class="btn btn-danger" onclick="deleteExpense('${e.id}')">Del</button>
+            </td>`;
+        tbody.appendChild(tr);
+    });
+    document.getElementById('emptyState').style.display = rows.length===0?'block':'none';
+}
+
+function sortBy(field) {
+    sortAsc = sortField===field ? !sortAsc : true; sortField = field;
+    document.querySelectorAll('.sa').forEach(el=>el.textContent='');
+    const a = document.getElementById('s-'+field); if(a) a.textContent = sortAsc?'▲':'▼';
+    render();
+}
+
+function saveExpense() {
+    const id=document.getElementById('editId').value;
+    const desc=document.getElementById('expDesc').value.trim();
+    const cat=document.getElementById('expCat').value;
+    const currency=document.getElementById('expCurrency').value;
+    const amount=document.getElementById('expAmount').value;
+    const date=document.getElementById('expDate').value;
+    const notes=document.getElementById('expNotes').value.trim();
+    const errEl=document.getElementById('formError');
+    if (!desc)   { errEl.textContent='Description is required.'; return; }
+    if (!amount||parseFloat(amount)<0) { errEl.textContent='Enter a valid amount.'; return; }
+    if (!date)   { errEl.textContent='Date is required.'; return; }
+    errEl.textContent='';
+    const data=load();
+    if (id) { const idx=data.findIndex(e=>e.id===id); if(idx!==-1) data[idx]={...data[idx],description:desc,category:cat,currency,amount,date,notes}; }
+    else data.push({id:Date.now().toString(),description:desc,category:cat,currency,amount,date,notes});
+    save(data); clearForm(); updateSummary(); render();
+}
+
+function editExpense(id) {
+    const e=load().find(x=>x.id===id); if(!e) return;
+    document.getElementById('editId').value=id;
+    document.getElementById('expDesc').value=e.description;
+    document.getElementById('expCat').value=e.category;
+    document.getElementById('expCurrency').value=e.currency||'THB';
+    document.getElementById('expAmount').value=e.amount;
+    document.getElementById('expDate').value=e.date||'';
+    document.getElementById('expNotes').value=e.notes||'';
+    document.getElementById('formTitle').textContent='Edit Expense';
+    document.getElementById('cancelBtn').style.display='inline-block';
+    document.querySelector('.form-section').scrollIntoView({behavior:'smooth'});
+}
+function deleteExpense(id) {
+    if(!confirm('Delete this expense?')) return;
+    save(load().filter(e=>e.id!==id)); updateSummary(); render();
+}
+function cancelEdit() { clearForm(); }
+function clearForm() {
+    ['editId','expDesc','expAmount','expNotes'].forEach(id=>{document.getElementById(id).value='';});
+    document.getElementById('expCat').value='food';
+    document.getElementById('expCurrency').value='THB';
+    document.getElementById('expDate').value=new Date().toISOString().slice(0,10);
+    document.getElementById('formTitle').textContent='New Expense';
+    document.getElementById('cancelBtn').style.display='none';
+    document.getElementById('formError').textContent='';
+}
+function exportCSV() {
+    const data=load();
+    if(!data.length){alert('No data to export.');return;}
+    const rows=[
+        ['Date','Description','Category','Amount','Currency','Notes'].join(','),
+        ...data.map(e=>[e.date||'',e.description,CAT_LABELS[e.category]||e.category,parseFloat(e.amount).toFixed(2),e.currency||'THB',e.notes||'']
+            .map(v=>`"${String(v).replace(/"/g,'""')}"`).join(','))
+    ].join('\n');
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(new Blob([rows],{type:'text/csv'}));
+    a.download=`expenses_${new Date().toISOString().slice(0,10)}.csv`;
+    a.click(); URL.revokeObjectURL(a.href);
+}
+
+document.getElementById('expDate').value = new Date().toISOString().slice(0,10);
+updateSummary(); render(); sortBy('date');
+</script>
+</body>
+</html>
