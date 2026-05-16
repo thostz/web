@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Car Performance Calculator</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600&family=Roboto+Slab:wght@400;700&display=swap');
+        * { box-sizing: border-box; }
+        body { font-family: 'Open Sans', sans-serif; margin: 0; padding: 0; background-color: #eaeaea; color: #333; }
+
+        .site-nav { background: #2c3e50; display: flex; flex-wrap: wrap; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 6px rgba(0,0,0,0.25); }
+        .site-nav a { color: #ecf0f1; text-decoration: none; padding: 12px 18px; font-size: 0.9em; font-weight: 600; transition: background 0.15s; }
+        .site-nav a:hover, .site-nav a.active { background: #c0392b; }
+
+        .container { width: 90%; max-width: 1150px; margin: 30px auto; padding: 24px; background: #fff; box-shadow: 0 0 20px rgba(0,0,0,0.1); border-radius: 10px; }
+        h1 { font-family: 'Roboto Slab', serif; color: #2c3e50; text-align: center; font-size: 2em; margin-bottom: 4px; }
+        .subtitle { text-align: center; color: #7f8c8d; margin-bottom: 28px; font-size: 0.93em; }
+
+        /* Config Label Bar */
+        .label-bar {
+            display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap;
+            background: #fdf3f2; border: 1px solid #f1c0bb; border-radius: 8px;
+            padding: 16px 20px; margin-bottom: 16px;
+        }
+        .label-bar .field { display: flex; flex-direction: column; gap: 4px; }
+        .label-bar label { font-size: 0.78em; font-weight: 600; color: #555; text-transform: uppercase; letter-spacing: 0.04em; }
+        .label-bar input, .label-bar select {
+            padding: 7px 10px; border: 1px solid #dbb; border-radius: 5px;
+            font-size: 0.95em; background: #fff; min-width: 160px;
+        }
+        .label-bar input:focus, .label-bar select:focus { outline: none; border-color: #c0392b; box-shadow: 0 0 0 2px #f5c6c2; }
+
+        .badge-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+        .badge {
+            display: inline-flex; align-items: center; gap: 6px;
+            background: #c0392b; color: #fff; border-radius: 20px;
+            padding: 4px 12px; font-size: 0.82em; font-weight: 600; cursor: pointer;
+        }
+        .badge.active-badge { background: #922b21; outline: 2px solid #f1948a; }
+        .badge .remove { cursor: pointer; font-size: 1em; opacity: 0.8; }
+        .badge .remove:hover { opacity: 1; }
+
+        .active-info {
+            background: #eafaf1; border: 1px solid #a9dfbf; border-radius: 6px;
+            padding: 10px 16px; margin-bottom: 24px; font-size: 0.9em; color: #1e8449;
+            display: none;
+        }
+        .active-info.visible { display: block; }
+
+        .btn { padding: 8px 18px; border: none; border-radius: 5px; cursor: pointer; font-size: 0.9em; font-weight: 600; transition: background 0.15s; }
+        .btn-primary { background: #c0392b; color: #fff; }
+        .btn-primary:hover { background: #96281b; }
+        .btn-secondary { background: #ecf0f1; color: #2c3e50; border: 1px solid #c5ccd4; }
+        .btn-secondary:hover { background: #d5dde6; }
+
+        /* Calc grid */
+        .calc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 22px; }
+
+        .calc-card { border: 1px solid #dde4ec; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        .calc-card-header {
+            background: #2c3e50; color: #ecf0f1; padding: 12px 18px;
+            font-family: 'Roboto Slab', serif; font-size: 1em; display: flex; align-items: center; gap: 8px;
+        }
+        .calc-card-header .icon { font-size: 1.2em; }
+        .calc-card-body { padding: 16px 18px; }
+
+        .formula-tag {
+            display: inline-block; background: #fdecea; color: #7b241c;
+            border: 1px solid #f1948a; border-radius: 4px;
+            font-size: 0.8em; padding: 3px 8px; margin-bottom: 12px; font-family: monospace;
+        }
+
+        .input-row { display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
+        .input-group { display: flex; flex-direction: column; gap: 3px; }
+        .input-group label { font-size: 0.78em; font-weight: 600; color: #555; text-transform: uppercase; letter-spacing: 0.04em; }
+        .input-group .iw { display: flex; align-items: center; }
+        .input-group input {
+            flex: 1; padding: 7px 10px; border: 1px solid #c0cfe0; border-radius: 5px 0 0 5px;
+            font-size: 0.95em; min-width: 0;
+        }
+        .input-group input:focus { outline: none; border-color: #c0392b; box-shadow: 0 0 0 2px #f5c6c2; }
+        .input-group .unit {
+            background: #ecf0f1; border: 1px solid #c0cfe0; border-left: none;
+            padding: 7px 10px; border-radius: 0 5px 5px 0; font-size: 0.82em; color: #555; white-space: nowrap;
+        }
+
+        .solve-btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+        .solve-btn {
+            padding: 5px 12px; border: 1px solid #c0392b; border-radius: 4px;
+            background: #fff; color: #c0392b; font-size: 0.82em; font-weight: 600; cursor: pointer; transition: background 0.12s;
+        }
+        .solve-btn:hover, .solve-btn.active-solve { background: #c0392b; color: #fff; }
+
+        .result-box {
+            background: #f8f8f8; border: 1px solid #dde4ec; border-radius: 6px;
+            padding: 10px 14px; min-height: 42px; font-size: 0.95em; color: #1a5276;
+        }
+        .result-box .rv { font-size: 1.3em; font-weight: 700; color: #922b21; }
+        .result-box .rl { font-size: 0.78em; color: #7f8c8d; }
+        .result-box.error { background: #fef9f0; border-color: #f0c080; color: #935116; }
+
+        /* Gear Simulation */
+        .gear-sim-section { margin-top: 34px; }
+        .section-h2 { font-family: 'Roboto Slab', serif; color: #2c3e50; font-size: 1.4em; border-bottom: 2px solid #ddd; padding-bottom: 6px; margin-bottom: 16px; }
+        .gear-sim-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+        @media(max-width:720px) { .gear-sim-grid { grid-template-columns: 1fr; } }
+        .gear-panel { border: 1px solid #dde4ec; border-radius: 10px; padding: 16px 18px; }
+        .gear-panel-title { font-family: 'Roboto Slab', serif; font-size: 1em; color: #2c3e50; margin-bottom: 12px; border-bottom: 1px solid #eee; padding-bottom: 6px; }
+        .gsim-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .gsim-field { display: flex; flex-direction: column; gap: 3px; }
+        .gsim-field label { font-size: 0.76em; font-weight: 600; color: #555; text-transform: uppercase; letter-spacing: 0.04em; }
+        .gear-sim-summary {
+            background: #f0f6fc; border: 1px solid #c5d8f0; border-radius: 8px;
+            padding: 12px 18px; margin-bottom: 14px; font-size: 0.9em;
+            display: flex; flex-wrap: wrap; gap: 18px;
+        }
+        .gear-sim-summary .s-item { display: flex; flex-direction: column; }
+        .gear-sim-summary .s-val { font-size: 1.15em; font-weight: 700; color: #154360; }
+        .gear-sim-summary .s-lbl { font-size: 0.75em; color: #7f8c8d; }
+        .gsim-table { width: 100%; border-collapse: collapse; font-size: 0.86em; min-width: 780px; }
+        .gsim-table th { background: #2c3e50; color: #ecf0f1; padding: 8px 10px; text-align: center; white-space: nowrap; }
+        .gsim-table td { padding: 7px 10px; border-bottom: 1px solid #eee; text-align: center; }
+        .gsim-table tr:hover td { background: #f5f9ff; }
+        .gsim-table .gear-num { font-weight: 700; color: #c0392b; }
+        .traction-yes { color: #c0392b; font-weight: 700; }
+        .traction-no  { color: #27ae60; }
+
+        /* History */
+        .history-section { margin-top: 32px; }
+        .history-section h2 { font-family: 'Roboto Slab', serif; color: #c0392b; font-size: 1.3em; border-bottom: 2px solid #ddd; padding-bottom: 5px; margin-bottom: 12px; }
+        .history-table { width: 100%; border-collapse: collapse; font-size: 0.87em; }
+        .history-table th { background: #2c3e50; color: #ecf0f1; padding: 8px 12px; text-align: left; }
+        .history-table td { padding: 7px 12px; border-bottom: 1px solid #eee; }
+        .history-table tr:hover td { background: #fff5f4; }
+        .history-table .no-data { text-align: center; color: #aaa; padding: 20px; }
+        .clr-btn { float: right; margin-top: -38px; }
+    </style>
+</head>
+<body>
+<nav class="site-nav">
+    <a href="main.html">&#128100; Profile</a>
+    <a href="investment.html">&#128200; Investment</a>
+    <a href="expense.html">&#128176; Expense</a>
+    <a href="notes.html">&#128221; Notes</a>
+    <a href="tasks.html">&#9989; Tasks</a>
+    <a href="physics.html" class="active">&#127950; Car Physics</a>
+</nav>
+
+<div class="container">
+    <h1>&#127950; Car Performance Calculator</h1>
+    <p class="subtitle">Label your car setup or configuration, then run the performance calculators. All results are saved to history.</p>
+
+    <!-- Config Label Input -->
+    <div class="label-bar">
+        <div class="field">
+            <label>Car / Setup Label</label>
+            <input type="text" id="carLabelInput" placeholder="e.g. Stock, Stage 1, Turbo Build" maxlength="50">
+        </div>
+        <div class="field">
+            <label>Drive Type</label>
+            <select id="driveType">
+                <option value="RWD">RWD</option>
+                <option value="FWD">FWD</option>
+                <option value="AWD">AWD</option>
+            </select>
+        </div>
+        <div class="field">
+            <label>Engine Type</label>
+            <select id="engineType">
+                <option value="NA">Naturally Aspirated</option>
+                <option value="Turbo">Turbocharged</option>
+                <option value="SC">Supercharged</option>
+                <option value="Hybrid">Hybrid</option>
+            </select>
+        </div>
+        <div class="field">
+            <label>&nbsp;</label>
+            <button class="btn btn-primary" onclick="addLabel()">+ Add Setup</button>
+        </div>
+        <div class="field">
+            <label>&nbsp;</label>
+            <button class="btn btn-secondary" onclick="clearActive()">Clear Active</button>
+        </div>
+    </div>
+    <div class="badge-row" id="labelBadges"></div>
+    <div class="active-info" id="activeInfo"></div>
+
+    <!-- Calculators -->
+    <div class="calc-grid">
+
+        <!-- HP ↔ Torque -->
+        <div class="calc-card">
+            <div class="calc-card-header"><span class="icon">&#128293;</span> Horsepower &amp; Torque</div>
+            <div class="calc-card-body">
+                <span class="formula-tag">HP = Torque(lb·ft) × RPM / 5252</span>
+                <div class="solve-btn-row">
+                    <button class="solve-btn active-solve" id="ht-solve-HP" onclick="setHtSolve('HP')">Solve HP</button>
+                    <button class="solve-btn" id="ht-solve-T" onclick="setHtSolve('T')">Solve Torque</button>
+                    <button class="solve-btn" id="ht-solve-RPM" onclick="setHtSolve('RPM')">Solve RPM</button>
+                </div>
+                <div class="input-row">
+                    <div class="input-group">
+                        <label>Horsepower</label>
+                        <div class="iw"><input type="number" id="ht-HP" placeholder="HP" step="any"><span class="unit">HP</span></div>
+                    </div>
+                    <div class="input-group">
+                        <label>Torque</label>
+                        <div class="iw"><input type="number" id="ht-T" placeholder="lb·ft" step="any"><span class="unit">lb·ft</span></div>
+                    </div>
+                    <div class="input-group">
+                        <label>RPM</label>
+                        <div class="iw"><input type="number" id="ht-RPM" placeholder="rev/min" step="any" min="1"><span class="unit">RPM</span></div>
+                    </div>
+                </div>
+                <button class="btn btn-primary" style="width:100%;margin-bottom:10px" onclick="calcHT()">Calculate</button>
+                <div class="result-box" id="ht-result">—</div>
+            </div>
+        </div>
+
+        <!-- Power-to-Weight -->
+        <div class="calc-card">
+            <div class="calc-card-header"><span class="icon">&#9878;&#65039;</span> Power-to-Weight Ratio</div>
+            <div class="calc-card-body">
+                <span class="formula-tag">P/W = HP / Weight(kg)  |  HP/ton</span>
+                <div class="input-row">
+                    <div class="input-group">
+                        <label>Horsepower</label>
+                        <div class="iw"><input type="number" id="pw-HP" placeholder="HP" step="any" min="0"><span class="unit">HP</span></div>
+                    </div>
+                    <div class="input-group">
+                        <label>Vehicle Weight</label>
+                        <div class="iw"><input type="number" id="pw-W" placeholder="kg" step="any" min="1"><span class="unit">kg</span></div>
+                    </div>
+                </div>
+                <button class="btn btn-primary" style="width:100%;margin-bottom:10px" onclick="calcPW()">Calculate</button>
+                <div class="result-box" id="pw-result">—</div>
+            </div>
+        </div>
+
+        <!-- 0–100 km/h Acceleration -->
+        <div class="calc-card">
+            <div class="calc-card-header"><span class="icon">&#128162;</span> 0–100 km/h Estimate</div>
+            <div class="calc-card-body">
+                <span class="formula-tag">t ≈ (W × Δv) / (P × η) &nbsp;—&nbsp; simplified</span>
+                <div class="input-row">
+                    <div class="input-group">
+                        <label>Power at Wheels</label>
+                        <div class="iw"><input type="number" id="acc-P" placeholder="kW" step="any" min="1"><span class="unit">kW</span></div>
+                    </div>
+                    <div class="input-group">
+                        <label>Vehicle Weight</label>
+                        <div class="iw"><input type="number" id="acc-W" placeholder="kg" step="any" min="1"><span class="unit">kg</span></div>
+                    </div>
+                    <div class="input-group">
+                        <label>Drivetrain Efficiency (η)</label>
+                        <div class="iw"><input type="number" id="acc-eta" placeholder="0.85" step="0.01" min="0.5" max="1" value="0.85"><span class="unit">0–1</span></div>
+                    </div>
+                </div>
+                <button class="btn btn-primary" style="width:100%;margin-bottom:10px" onclick="calcAcc()">Calculate</button>
+                <div class="result-box" id="acc-result">—</div>
+            </div>
+        </div>
+
+        <!-- Friction Force -->
+        <div class="calc-card">
+            <div class="calc-card-header"><span class="icon">&#128308;</span> Friction &amp; Traction</div>
+            <div class="calc-card-body">
+                <span class="formula-tag">F_f = μ × m × g &nbsp;|&nbsp; a_max = μ × g</span>
+                <div class="solve-btn-row">
+                    <button class="solve-btn active-solve" id="fr-solve-F" onclick="setFrSolve('F')">Solve Force</button>
+                    <button class="solve-btn" id="fr-solve-mu" onclick="setFrSolve('mu')">Solve μ</button>
+                </div>
+                <div class="input-row">
+                    <div class="input-group">
+                        <label>Coefficient of Friction (μ)</label>
+                        <div class="iw"><input type="number" id="fr-mu" placeholder="e.g. 0.8 dry, 1.2 slick" step="0.01" min="0"><span class="unit">—</span></div>
+                    </div>
+                    <div class="input-group">
+                        <label>Vehicle Mass</label>
+                        <div class="iw"><input type="number" id="fr-m" placeholder="kg" step="any" min="0"><span class="unit">kg</span></div>
+                    </div>
+                    <div class="input-group">
+                        <label>Friction Force (F)</label>
+                        <div class="iw"><input type="number" id="fr-F" placeholder="N" step="any" min="0"><span class="unit">N</span></div>
+                    </div>
+                </div>
+                <button class="btn btn-primary" style="width:100%;margin-bottom:10px" onclick="calcFriction()">Calculate</button>
+                <div class="result-box" id="fr-result">—</div>
+            </div>
+        </div>
+
+        <!-- Aerodynamic Drag -->
+        <div class="calc-card">
+            <div class="calc-card-header"><span class="icon">&#127756;</span> Aerodynamic Drag</div>
+            <div class="calc-card-body">
+                <span class="formula-tag">F_drag = ½ × ρ_air × Cd × A × v²</span>
+                <div class="input-row">
+                    <div class="input-group">
+                        <label>Drag Coefficient (Cd)</label>
+                        <div class="iw"><input type="number" id="drag-Cd" placeholder="e.g. 0.30" step="0.01" min="0"><span class="unit">—</span></div>
+                    </div>
+                    <div class="input-group">
+                        <label>Frontal Area (A)</label>
+                        <div class="iw"><input type="number" id="drag-A" placeholder="m²" step="0.01" min="0"><span class="unit">m²</span></div>
+                    </div>
+                    <div class="input-group">
+                        <label>Speed</label>
+                        <div class="iw"><input type="number" id="drag-v" placeholder="km/h" step="any" min="0"><span class="unit">km/h</span></div>
+                    </div>
+                    <div class="input-group">
+                        <label>Air Density (ρ) — 1.225 kg/m³ sea level</label>
+                        <div class="iw"><input type="number" id="drag-rho" placeholder="1.225" step="any" min="0" value="1.225"><span class="unit">kg/m³</span></div>
+                    </div>
+                </div>
+                <button class="btn btn-primary" style="width:100%;margin-bottom:10px" onclick="calcDrag()">Calculate</button>
+                <div class="result-box" id="drag-result">—</div>
+            </div>
+        </div>
+
+        <!-- Braking Distance -->
+        <div class="calc-card">
+            <div class="calc-card-header"><span class="icon">&#128721;</span> Braking Distance</div>
+            <div class="calc-card-body">
+                <span class="formula-tag">d = v² / (2 × μ × g)</span>
+                <div class="input-row">
+                    <div class="input-group">
+                        <label>Initial Speed</label>
+                        <div class="iw"><input type="number" id="brk-v" placeholder="km/h" step="any" min="0"><span class="unit">km/h</span></div>
+                    </div>
+                    <div class="input-group">
+                        <label>Coefficient of Friction (μ)</label>
+                        <div class="iw"><input type="number" id="brk-mu" placeholder="e.g. 0.8" step="0.01" min="0"><span class="unit">—</span></div>
+                    </div>
+                </div>
+                <button class="btn btn-primary" style="width:100%;margin-bottom:10px" onclick="calcBraking()">Calculate</button>
+                <div class="result-box" id="brk-result">—</div>
+            </div>
+        </div>
+
+        <!-- Torque at Wheel -->
+        <div class="calc-card">
+            <div class="calc-card-header"><span class="icon">&#9881;&#65039;</span> Wheel Torque &amp; Speed</div>
+            <div class="calc-card-body">
+                <span class="formula-tag">T_wheel = T_engine × GR_total × η &nbsp;|&nbsp; v = (RPM / GR) × 2π × r_tire / 60</span>
+                <div class="input-row">
+                    <div class="input-group">
+                        <label>Engine Torque</label>
+                        <div class="iw"><input type="number" id="wt-T" placeholder="N·m" step="any" min="0"><span class="unit">N·m</span></div>
+                    </div>
+                    <div class="input-group">
+                        <label>Total Gear Ratio (trans × final drive)</label>
+                        <div class="iw"><input type="number" id="wt-GR" placeholder="e.g. 3.5" step="any" min="0"><span class="unit">—</span></div>
+                    </div>
+                    <div class="input-group">
+                        <label>Drivetrain Efficiency (η)</label>
+                        <div class="iw"><input type="number" id="wt-eta" placeholder="0.85" step="0.01" min="0" max="1" value="0.85"><span class="unit">0–1</span></div>
+                    </div>
+                    <div class="input-group">
+                        <label>Tire Radius</label>
+                        <div class="iw"><input type="number" id="wt-r" placeholder="m" step="0.001" min="0"><span class="unit">m</span></div>
+                    </div>
+                    <div class="input-group">
+                        <label>Engine RPM</label>
+                        <div class="iw"><input type="number" id="wt-RPM" placeholder="RPM" step="any" min="0"><span class="unit">RPM</span></div>
+                    </div>
+                </div>
+                <button class="btn btn-primary" style="width:100%;margin-bottom:10px" onclick="calcWheelTorque()">Calculate</button>
+                <div class="result-box" id="wt-result">—</div>
+            </div>
+        </div>
+
+        <!-- Rolling Resistance -->
+        <div class="calc-card">
+            <div class="calc-card-header"><span class="icon">&#128740;</span> Rolling Resistance</div>
+            <div class="calc-card-body">
+                <span class="formula-tag">F_roll = Cr × m × g</span>
+                <div class="input-row">
+                    <div class="input-group">
+                        <label>Rolling Resistance Coeff. (Cr)</label>
+                        <div class="iw"><input type="number" id="rr-Cr" placeholder="e.g. 0.012 road tire" step="0.001" min="0"><span class="unit">—</span></div>
+                    </div>
+                    <div class="input-group">
+                        <label>Vehicle Mass</label>
+                        <div class="iw"><input type="number" id="rr-m" placeholder="kg" step="any" min="0"><span class="unit">kg</span></div>
+                    </div>
+                </div>
+                <button class="btn btn-primary" style="width:100%;margin-bottom:10px" onclick="calcRolling()">Calculate</button>
+                <div class="result-box" id="rr-result">—</div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Gear Simulation -->
+    <div class="gear-sim-section">
+        <h2 class="section-h2">&#9881;&#65039; Gear-by-Gear Acceleration Simulation</h2>
+        <p style="color:#7f8c8d;font-size:.9em;margin-top:-8px;margin-bottom:16px">Enter engine specs and gear ratios to simulate wheel torque, speed range, and peak acceleration for each gear.</p>
+
+        <div class="gear-sim-grid">
+            <!-- Engine Inputs -->
+            <div class="gear-panel">
+                <div class="gear-panel-title">Engine &amp; Vehicle</div>
+                <div class="gsim-row">
+                    <div class="gsim-field">
+                        <label>Peak Torque</label>
+                        <div class="iw"><input type="number" id="gs-Tq" placeholder="N·m" step="any" min="1"><span class="unit">N·m</span></div>
+                    </div>
+                    <div class="gsim-field">
+                        <label>at RPM</label>
+                        <div class="iw"><input type="number" id="gs-TqRPM" placeholder="RPM" step="any" min="100"><span class="unit">RPM</span></div>
+                    </div>
+                    <div class="gsim-field">
+                        <label>Redline</label>
+                        <div class="iw"><input type="number" id="gs-redline" placeholder="RPM" step="any" min="100"><span class="unit">RPM</span></div>
+                    </div>
+                    <div class="gsim-field">
+                        <label>Vehicle Mass</label>
+                        <div class="iw"><input type="number" id="gs-mass" placeholder="kg" step="any" min="100"><span class="unit">kg</span></div>
+                    </div>
+                    <div class="gsim-field">
+                        <label>Drivetrain η</label>
+                        <div class="iw"><input type="number" id="gs-eta" placeholder="0.85" step="0.01" min="0.5" max="1" value="0.85"><span class="unit">—</span></div>
+                    </div>
+                    <div class="gsim-field">
+                        <label>Traction μ</label>
+                        <div class="iw"><input type="number" id="gs-mu" placeholder="0.9" step="0.01" min="0.1" value="0.9"><span class="unit">—</span></div>
+                    </div>
+                    <div class="gsim-field">
+                        <label>Tire Radius</label>
+                        <div class="iw"><input type="number" id="gs-tr" placeholder="m e.g. 0.315" step="0.001" min="0.1"><span class="unit">m</span></div>
+                    </div>
+                    <div class="gsim-field">
+                        <label>Final Drive Ratio</label>
+                        <div class="iw"><input type="number" id="gs-fd" placeholder="e.g. 3.73" step="0.01" min="0.5"><span class="unit">—</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Gear Ratios -->
+            <div class="gear-panel">
+                <div class="gear-panel-title">Gear Ratios</div>
+                <div class="gsim-row">
+                    <div class="gsim-field"><label>Gear 1</label><div class="iw"><input type="number" id="gs-g1" placeholder="e.g. 3.82" step="0.01" min="0.1"><span class="unit">—</span></div></div>
+                    <div class="gsim-field"><label>Gear 2</label><div class="iw"><input type="number" id="gs-g2" placeholder="e.g. 2.36" step="0.01" min="0.1"><span class="unit">—</span></div></div>
+                    <div class="gsim-field"><label>Gear 3</label><div class="iw"><input type="number" id="gs-g3" placeholder="e.g. 1.68" step="0.01" min="0.1"><span class="unit">—</span></div></div>
+                    <div class="gsim-field"><label>Gear 4</label><div class="iw"><input type="number" id="gs-g4" placeholder="e.g. 1.31" step="0.01" min="0.1"><span class="unit">—</span></div></div>
+                    <div class="gsim-field"><label>Gear 5</label><div class="iw"><input type="number" id="gs-g5" placeholder="e.g. 1.00" step="0.01" min="0.1"><span class="unit">—</span></div></div>
+                    <div class="gsim-field"><label>Gear 6</label><div class="iw"><input type="number" id="gs-g6" placeholder="e.g. 0.82" step="0.01" min="0.1"><span class="unit">—</span></div></div>
+                    <div class="gsim-field"><label>Gear 7 (opt.)</label><div class="iw"><input type="number" id="gs-g7" placeholder="optional" step="0.01" min="0.1"><span class="unit">—</span></div></div>
+                    <div class="gsim-field"><label>Gear 8 (opt.)</label><div class="iw"><input type="number" id="gs-g8" placeholder="optional" step="0.01" min="0.1"><span class="unit">—</span></div></div>
+                </div>
+                <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap">
+                    <button class="btn btn-primary" onclick="runGearSim()">&#9654; Run Simulation</button>
+                    <button class="btn btn-secondary" onclick="fillExample()">Load Example (Sport Sedan)</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="gear-sim-result" style="margin-top:20px;display:none">
+            <div class="gear-sim-summary" id="gear-sim-summary"></div>
+            <div style="overflow-x:auto">
+                <table class="gsim-table" id="gear-sim-table">
+                    <thead>
+                        <tr>
+                            <th>Gear</th>
+                            <th>Ratio</th>
+                            <th>Total Ratio</th>
+                            <th>RPM Range</th>
+                            <th>Speed Range</th>
+                            <th>Wheel Torque</th>
+                            <th>Tractive Force</th>
+                            <th>Accel. (m/s²)</th>
+                            <th>Accel. (g)</th>
+                            <th>Traction Limited?</th>
+                        </tr>
+                    </thead>
+                    <tbody id="gear-sim-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- History -->
+    <div class="history-section">
+        <h2>Calculation History
+            <button class="btn btn-secondary clr-btn" onclick="clearHistory()">Clear</button>
+        </h2>
+        <table class="history-table">
+            <thead>
+                <tr><th>#</th><th>Setup Label</th><th>Calculator</th><th>Inputs</th><th>Result</th><th>Time</th></tr>
+            </thead>
+            <tbody id="historyBody">
+                <tr><td colspan="6" class="no-data">No calculations yet.</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    const G = 9.81;
+    let setups = [];
+    let activeSetup = null;
+    let history = [];
+    let histCount = 0;
+
+    // Solve modes
+    let htSolve = 'HP';
+    let frSolve = 'F';
+
+    // ── Setup Labels ──────────────────────────────────────────────────────
+    document.getElementById('carLabelInput').addEventListener('keydown', e => { if (e.key === 'Enter') addLabel(); });
+
+    function addLabel() {
+        const label = document.getElementById('carLabelInput').value.trim();
+        if (!label) { alert('Please enter a car/setup label.'); return; }
+        const drive = document.getElementById('driveType').value;
+        const engine = document.getElementById('engineType').value;
+        const setup = { label, drive, engine };
+        setups.push(setup);
+        setActive(setup);
+        renderBadges();
+        document.getElementById('carLabelInput').value = '';
+    }
+
+    function setActive(s) {
+        activeSetup = s;
+        renderBadges();
+        const info = document.getElementById('activeInfo');
+        info.className = 'active-info visible';
+        info.innerHTML = `Active: <strong>${s.label}</strong> &nbsp;|&nbsp; ${s.drive} &nbsp;|&nbsp; ${s.engine}`;
+    }
+
+    function clearActive() {
+        activeSetup = null;
+        document.getElementById('activeInfo').className = 'active-info';
+        renderBadges();
+    }
+
+    function removeSetup(i) {
+        if (activeSetup === setups[i]) clearActive();
+        setups.splice(i, 1);
+        renderBadges();
+    }
+
+    function renderBadges() {
+        document.getElementById('labelBadges').innerHTML = setups.map((s, i) =>
+            `<span class="badge${activeSetup === s ? ' active-badge' : ''}" onclick="setActive(setups[${i}])" title="Click to activate">
+                ${s.label} <small style="opacity:.75">(${s.drive}/${s.engine})</small>
+                <span class="remove" onclick="event.stopPropagation();removeSetup(${i})">&#x2715;</span>
+            </span>`
+        ).join('');
+    }
+
+    // ── Solve toggles ─────────────────────────────────────────────────────
+    function setSolveBtn(prefix, val, ids) {
+        ids.forEach(id => document.getElementById(`${prefix}-solve-${id}`).classList.remove('active-solve'));
+        document.getElementById(`${prefix}-solve-${val}`).classList.add('active-solve');
+    }
+    function setHtSolve(v) { htSolve = v; setSolveBtn('ht', v, ['HP','T','RPM']); }
+    function setFrSolve(v) { frSolve = v; setSolveBtn('fr', v, ['F','mu']); }
+
+    // ── Utility ───────────────────────────────────────────────────────────
+    function fmt(n, unit = '') {
+        if (n === null || isNaN(n) || !isFinite(n)) return '—';
+        const abs = Math.abs(n);
+        let s;
+        if (abs === 0) s = '0';
+        else if (abs >= 1e6) s = (n/1e6).toPrecision(5) + ' M';
+        else if (abs >= 1e3) s = (n/1e3).toPrecision(5) + ' k';
+        else s = n.toPrecision(5);
+        return s.trim() + (unit ? ' ' + unit : '');
+    }
+
+    function showResult(id, html, isError = false) {
+        const el = document.getElementById(id);
+        el.className = 'result-box' + (isError ? ' error' : '');
+        el.innerHTML = html;
+    }
+
+    function logHistory(calc, inputs, result) {
+        histCount++;
+        history.unshift({
+            n: histCount,
+            label: activeSetup ? activeSetup.label : '—',
+            calc, inputs, result,
+            time: new Date().toLocaleTimeString()
+        });
+        const body = document.getElementById('historyBody');
+        body.innerHTML = history.map(h =>
+            `<tr>
+                <td>${h.n}</td><td>${h.label}</td><td>${h.calc}</td>
+                <td style="font-family:monospace;font-size:0.84em">${h.inputs}</td>
+                <td><strong>${h.result}</strong></td><td>${h.time}</td>
+            </tr>`
+        ).join('');
+    }
+
+    function clearHistory() { history = []; histCount = 0; document.getElementById('historyBody').innerHTML = '<tr><td colspan="6" class="no-data">No calculations yet.</td></tr>'; }
+
+    // ── HP ↔ Torque ───────────────────────────────────────────────────────
+    function calcHT() {
+        const HP  = parseFloat(document.getElementById('ht-HP').value);
+        const T   = parseFloat(document.getElementById('ht-T').value);
+        const RPM = parseFloat(document.getElementById('ht-RPM').value);
+        let res, inputs;
+
+        if (htSolve === 'HP') {
+            if (isNaN(T) || isNaN(RPM) || RPM <= 0) return showResult('ht-result', 'Provide Torque (lb·ft) and RPM to solve HP.', true);
+            res = T * RPM / 5252; inputs = `T=${fmt(T,'lb·ft')}, RPM=${fmt(RPM)}`;
+            showResult('ht-result', `<div class="rl">Horsepower</div><div class="rv">${fmt(res,'HP')}</div><div style="font-size:.85em;color:#555;margin-top:4px">${fmt(res*0.7457,'kW')}</div>`);
+        } else if (htSolve === 'T') {
+            if (isNaN(HP) || isNaN(RPM) || RPM <= 0) return showResult('ht-result', 'Provide HP and RPM to solve Torque.', true);
+            res = HP * 5252 / RPM; inputs = `HP=${fmt(HP)}, RPM=${fmt(RPM)}`;
+            showResult('ht-result', `<div class="rl">Torque</div><div class="rv">${fmt(res,'lb·ft')}</div><div style="font-size:.85em;color:#555;margin-top:4px">${fmt(res*1.35582,'N·m')}</div>`);
+        } else {
+            if (isNaN(HP) || isNaN(T) || T <= 0) return showResult('ht-result', 'Provide HP and Torque to solve RPM.', true);
+            res = HP * 5252 / T; inputs = `HP=${fmt(HP)}, T=${fmt(T,'lb·ft')}`;
+            showResult('ht-result', `<div class="rl">Peak Power RPM</div><div class="rv">${fmt(res,'RPM')}</div>`);
+        }
+        logHistory(`HP/Torque (${htSolve})`, inputs, fmt(res, htSolve === 'HP' ? 'HP' : htSolve === 'T' ? 'lb·ft' : 'RPM'));
+    }
+
+    // ── Power-to-Weight ───────────────────────────────────────────────────
+    function calcPW() {
+        const HP = parseFloat(document.getElementById('pw-HP').value);
+        const W  = parseFloat(document.getElementById('pw-W').value);
+        if (isNaN(HP) || isNaN(W) || W <= 0) return showResult('pw-result', 'Provide HP and Weight (kg).', true);
+        const ratio = HP / W;
+        const hpTon = HP / (W / 1000);
+        showResult('pw-result', `
+            <div class="rl">Power-to-Weight</div>
+            <div class="rv">${ratio.toPrecision(4)} HP/kg</div>
+            <div style="font-size:.85em;color:#555;margin-top:4px">
+                ${hpTon.toFixed(1)} HP/ton &nbsp;|&nbsp;
+                ${(HP*0.7457/W*1000).toFixed(1)} kW/ton
+                ${hpTon >= 300 ? ' &#128293; Supercar' : hpTon >= 150 ? ' &#9889; Performance' : hpTon >= 80 ? ' &#128664; Sport' : ' &#128663; Standard'}
+            </div>`);
+        logHistory('Power-to-Weight', `HP=${HP}, W=${fmt(W,'kg')}`, `${ratio.toPrecision(4)} HP/kg`);
+    }
+
+    // ── 0–100 Estimate ────────────────────────────────────────────────────
+    function calcAcc() {
+        const P   = parseFloat(document.getElementById('acc-P').value);   // kW
+        const W   = parseFloat(document.getElementById('acc-W').value);   // kg
+        const eta = parseFloat(document.getElementById('acc-eta').value);
+        if ([P, W, eta].some(isNaN) || W <= 0 || P <= 0 || eta <= 0) return showResult('acc-result', 'Provide Power (kW), Weight and Efficiency.', true);
+        const Pw = P * 1000 * eta;    // watts at wheels
+        const v  = 100 / 3.6;        // 100 km/h in m/s
+        const t  = (0.5 * W * v * v) / Pw;
+        const inputs = `P=${fmt(P,'kW')}, W=${fmt(W,'kg')}, η=${eta}`;
+        showResult('acc-result', `
+            <div class="rl">0–100 km/h (energy estimate)</div>
+            <div class="rv">${t.toFixed(2)} s</div>
+            <div style="font-size:.82em;color:#888;margin-top:4px">Energy-based estimate. Actual time varies with traction, gearing &amp; launch.</div>`);
+        logHistory('0-100 km/h', inputs, `${t.toFixed(2)} s`);
+    }
+
+    // ── Friction ─────────────────────────────────────────────────────────
+    function calcFriction() {
+        const mu = parseFloat(document.getElementById('fr-mu').value);
+        const m  = parseFloat(document.getElementById('fr-m').value);
+        const F  = parseFloat(document.getElementById('fr-F').value);
+        let res, inputs;
+
+        if (frSolve === 'F') {
+            if (isNaN(mu) || isNaN(m) || m <= 0) return showResult('fr-result', 'Provide μ and Mass to solve Friction Force.', true);
+            res = mu * m * G; inputs = `μ=${mu}, m=${fmt(m,'kg')}`;
+            const aMax = mu * G;
+            showResult('fr-result', `
+                <div class="rl">Max Friction / Traction Force</div>
+                <div class="rv">${fmt(res,'N')}</div>
+                <div style="font-size:.85em;color:#555;margin-top:4px">
+                    Max acceleration = ${aMax.toFixed(3)} m/s² (${(aMax/G).toFixed(3)} g) &nbsp;|&nbsp;
+                    ${(mu).toFixed(2)} μ — ${mu<=0.5?'Ice/Wet':mu<=0.9?'Wet Asphalt':mu<=1.1?'Dry Asphalt':mu<=1.5?'Sport Tire':'Racing Slick'}
+                </div>`);
+        } else {
+            if (isNaN(F) || isNaN(m) || m <= 0) return showResult('fr-result', 'Provide Friction Force and Mass to solve μ.', true);
+            res = F / (m * G); inputs = `F=${fmt(F,'N')}, m=${fmt(m,'kg')}`;
+            showResult('fr-result', `<div class="rl">Coefficient of Friction (μ)</div><div class="rv">${res.toFixed(4)}</div>`);
+        }
+        logHistory(`Friction (${frSolve})`, inputs, fmt(res, frSolve === 'F' ? 'N' : ''));
+    }
+
+    // ── Aero Drag ─────────────────────────────────────────────────────────
+    function calcDrag() {
+        const Cd  = parseFloat(document.getElementById('drag-Cd').value);
+        const A   = parseFloat(document.getElementById('drag-A').value);
+        const vkm = parseFloat(document.getElementById('drag-v').value);
+        const rho = parseFloat(document.getElementById('drag-rho').value);
+        if ([Cd, A, vkm, rho].some(isNaN) || A <= 0 || vkm < 0) return showResult('drag-result', 'Provide Cd, Frontal Area, Speed and Air Density.', true);
+        const v = vkm / 3.6;
+        const F = 0.5 * rho * Cd * A * v * v;
+        const Pw = F * v;
+        const inputs = `Cd=${Cd}, A=${fmt(A,'m²')}, v=${fmt(vkm,'km/h')}, ρ=${rho}`;
+        showResult('drag-result', `
+            <div class="rl">Aerodynamic Drag Force</div>
+            <div class="rv">${fmt(F,'N')}</div>
+            <div style="font-size:.85em;color:#555;margin-top:4px">Power to overcome drag: <strong>${fmt(Pw/1000,'kW')}</strong> (${fmt(Pw/745.7,'HP')})</div>`);
+        logHistory('Aero Drag', inputs, fmt(F,'N'));
+    }
+
+    // ── Braking Distance ──────────────────────────────────────────────────
+    function calcBraking() {
+        const vkm = parseFloat(document.getElementById('brk-v').value);
+        const mu  = parseFloat(document.getElementById('brk-mu').value);
+        if (isNaN(vkm) || isNaN(mu) || mu <= 0) return showResult('brk-result', 'Provide Speed and μ (> 0).', true);
+        const v = vkm / 3.6;
+        const d = v * v / (2 * mu * G);
+        const t = v / (mu * G);
+        const inputs = `v=${fmt(vkm,'km/h')}, μ=${mu}`;
+        showResult('brk-result', `
+            <div class="rl">Stopping Distance</div>
+            <div class="rv">${d.toFixed(2)} m</div>
+            <div style="font-size:.85em;color:#555;margin-top:4px">Braking time ≈ ${t.toFixed(2)} s &nbsp;|&nbsp; Deceleration = ${(mu*G).toFixed(2)} m/s² (${mu.toFixed(2)} g)</div>`);
+        logHistory('Braking Distance', inputs, `${d.toFixed(2)} m`);
+    }
+
+    // ── Wheel Torque & Speed ──────────────────────────────────────────────
+    function calcWheelTorque() {
+        const T   = parseFloat(document.getElementById('wt-T').value);
+        const GR  = parseFloat(document.getElementById('wt-GR').value);
+        const eta = parseFloat(document.getElementById('wt-eta').value);
+        const r   = parseFloat(document.getElementById('wt-r').value);
+        const RPM = parseFloat(document.getElementById('wt-RPM').value);
+        if ([T, GR, eta].some(isNaN) || GR <= 0 || eta <= 0) return showResult('wt-result', 'Provide Engine Torque, Gear Ratio and Efficiency.', true);
+        const Tw = T * GR * eta;
+        let html = `<div class="rl">Wheel Torque</div><div class="rv">${fmt(Tw,'N·m')}</div>`;
+        if (!isNaN(r) && r > 0 && !isNaN(RPM) && RPM > 0) {
+            const wheel_rps = RPM / 60 / GR;
+            const v_ms = wheel_rps * 2 * Math.PI * r;
+            const vkm = v_ms * 3.6;
+            html += `<div style="font-size:.85em;color:#555;margin-top:4px">Vehicle speed ≈ <strong>${vkm.toFixed(1)} km/h</strong> at ${RPM} RPM &nbsp;|&nbsp; Wheel force = ${fmt(Tw/r,'N')}</div>`;
+        }
+        const inputs = `T=${fmt(T,'N·m')}, GR=${GR}, η=${eta}${!isNaN(r)&&r>0?', r='+r+'m':''}`;
+        showResult('wt-result', html);
+        logHistory('Wheel Torque', inputs, fmt(Tw,'N·m'));
+    }
+
+    // ── Gear Simulation ───────────────────────────────────────────────────
+    function fillExample() {
+        // Toyota Supra A90 / sport sedan example
+        document.getElementById('gs-Tq').value     = 500;
+        document.getElementById('gs-TqRPM').value  = 2600;
+        document.getElementById('gs-redline').value= 6500;
+        document.getElementById('gs-mass').value   = 1500;
+        document.getElementById('gs-eta').value    = 0.85;
+        document.getElementById('gs-mu').value     = 0.9;
+        document.getElementById('gs-tr').value     = 0.315;
+        document.getElementById('gs-fd').value     = 3.15;
+        const ratios = [4.17, 2.34, 1.52, 1.14, 0.85, 0.67];
+        ratios.forEach((r, i) => { document.getElementById(`gs-g${i+1}`).value = r; });
+        document.getElementById('gs-g7').value = '';
+        document.getElementById('gs-g8').value = '';
+    }
+
+    function runGearSim() {
+        const Tq      = parseFloat(document.getElementById('gs-Tq').value);
+        const TqRPM   = parseFloat(document.getElementById('gs-TqRPM').value);
+        const redline = parseFloat(document.getElementById('gs-redline').value);
+        const mass    = parseFloat(document.getElementById('gs-mass').value);
+        const eta     = parseFloat(document.getElementById('gs-eta').value);
+        const mu      = parseFloat(document.getElementById('gs-mu').value);
+        const tr      = parseFloat(document.getElementById('gs-tr').value);
+        const fd      = parseFloat(document.getElementById('gs-fd').value);
+
+        if ([Tq, TqRPM, redline, mass, eta, mu, tr, fd].some(isNaN)) {
+            alert('Please fill in all Engine & Vehicle fields.'); return;
+        }
+
+        const gearIds = ['gs-g1','gs-g2','gs-g3','gs-g4','gs-g5','gs-g6','gs-g7','gs-g8'];
+        const gears = gearIds.map(id => parseFloat(document.getElementById(id).value)).filter(v => !isNaN(v) && v > 0);
+        if (gears.length < 1) { alert('Please enter at least one gear ratio.'); return; }
+
+        const F_traction_max = mu * mass * G;  // max traction force (N)
+        const idleRPM = 1000;
+
+        const rows = gears.map((gr, idx) => {
+            const totalRatio = gr * fd;
+            const Tw   = Tq * totalRatio * eta;            // wheel torque at peak Tq RPM
+            const Fw   = Tw / tr;                          // tractive force
+            const FwLimited = Math.min(Fw, F_traction_max);
+            const isTractionLimited = Fw > F_traction_max;
+            const a    = FwLimited / mass;                  // acceleration m/s²
+
+            // Speed at idle and redline
+            const vMin = (idleRPM / totalRatio) * (2 * Math.PI * tr) / 60 * 3.6;
+            const vMax = (redline  / totalRatio) * (2 * Math.PI * tr) / 60 * 3.6;
+            const vPeak = (TqRPM  / totalRatio) * (2 * Math.PI * tr) / 60 * 3.6;
+
+            return { gear: idx + 1, gr, totalRatio, vMin, vMax, vPeak, Tw, Fw, FwLimited, a, isTractionLimited };
+        });
+
+        // Summary stats
+        const topSpeed = rows[rows.length - 1].vMax;
+        const bestA    = Math.max(...rows.map(r => r.a));
+        const bestG    = bestA / G;
+
+        document.getElementById('gear-sim-summary').innerHTML = `
+            <div class="s-item"><span class="s-val">${gears.length}</span><span class="s-lbl">Gears</span></div>
+            <div class="s-item"><span class="s-val">${Tq} N·m</span><span class="s-lbl">Peak Torque @ ${TqRPM} RPM</span></div>
+            <div class="s-item"><span class="s-val">${topSpeed.toFixed(0)} km/h</span><span class="s-lbl">Theoretical Top Speed</span></div>
+            <div class="s-item"><span class="s-val">${bestA.toFixed(2)} m/s²</span><span class="s-lbl">Peak Acceleration</span></div>
+            <div class="s-item"><span class="s-val">${bestG.toFixed(3)} g</span><span class="s-lbl">Peak g-force</span></div>
+            <div class="s-item"><span class="s-val">${(F_traction_max/1000).toFixed(2)} kN</span><span class="s-lbl">Max Traction (μ=${mu})</span></div>
+        `;
+
+        document.getElementById('gear-sim-tbody').innerHTML = rows.map(r => `
+            <tr>
+                <td class="gear-num">G${r.gear}</td>
+                <td>${r.gr.toFixed(2)}</td>
+                <td>${r.totalRatio.toFixed(3)}</td>
+                <td>${idleRPM.toLocaleString()} – ${redline.toLocaleString()}</td>
+                <td>${r.vMin.toFixed(1)} – ${r.vMax.toFixed(1)} km/h</td>
+                <td>${r.Tw.toFixed(0)} N·m</td>
+                <td>${r.Fw.toFixed(0)} N${r.isTractionLimited ? ' → '+r.FwLimited.toFixed(0)+' N' : ''}</td>
+                <td>${r.a.toFixed(2)}</td>
+                <td>${(r.a/G).toFixed(3)}</td>
+                <td class="${r.isTractionLimited ? 'traction-yes' : 'traction-no'}">${r.isTractionLimited ? '&#9888; Yes' : '&#10003; No'}</td>
+            </tr>`).join('');
+
+        document.getElementById('gear-sim-result').style.display = 'block';
+        document.getElementById('gear-sim-result').scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+        logHistory('Gear Simulation', `${gears.length} gears, Tq=${Tq}N·m, m=${mass}kg`, `Top ${topSpeed.toFixed(0)} km/h, max ${bestG.toFixed(3)} g`);
+    }
+
+    // ── Rolling Resistance ────────────────────────────────────────────────
+    function calcRolling() {
+        const Cr = parseFloat(document.getElementById('rr-Cr').value);
+        const m  = parseFloat(document.getElementById('rr-m').value);
+        if (isNaN(Cr) || isNaN(m) || m <= 0) return showResult('rr-result', 'Provide Rolling Coefficient (Cr) and Mass.', true);
+        const F = Cr * m * G;
+        const inputs = `Cr=${Cr}, m=${fmt(m,'kg')}`;
+        showResult('rr-result', `
+            <div class="rl">Rolling Resistance Force</div>
+            <div class="rv">${fmt(F,'N')}</div>
+            <div style="font-size:.85em;color:#555;margin-top:4px">Typical Cr: 0.010–0.015 road tires &nbsp;|&nbsp; 0.002–0.005 low rolling resistance</div>`);
+        logHistory('Rolling Resistance', inputs, fmt(F,'N'));
+    }
+</script>
+</body>
+</html>
