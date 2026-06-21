@@ -1,18 +1,19 @@
 // ============================================================
-//  kinn Assignment Tracker — Google Apps Script Backend
-//  Sheet: Tasks  |  columns: id,title,description,owner,
-//         department,client,startDate,dueDate,progress,
-//         status,priority,type,notes,importance,urgency
+//  Assignment Tracker — Google Apps Script Backend
+//  Sheet: Tasks        — assignments
+//  Sheet: Transactions — project transactions
+//  Sheet: Config       — app configuration
 // ============================================================
 
-const TASKS_SHEET  = 'Tasks';
-const CONFIG_SHEET = 'Config';
+const TASKS_SHEET        = 'Tasks';
+const CONFIG_SHEET       = 'Config';
+const TRANSACTIONS_SHEET = 'Transactions';
 
 /* ------ Web App entry point ------ */
 function doGet() {
   return HtmlService.createTemplateFromFile('Index')
     .evaluate()
-    .setTitle('kinn Assignment Tracker')
+    .setTitle('Assignment Tracker')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
@@ -182,6 +183,69 @@ function deleteTask(id) {
 
   const ids = sheet.getRange(2, idCol, sheet.getLastRow() - 1, 1).getValues().flat().map(String);
   const row = ids.indexOf(String(id));
+  if (row >= 0) { sheet.deleteRow(row + 2); return { success: true }; }
+  return { success: false };
+}
+
+/* ------ Transactions ------ */
+const TX_HEADERS = ['id','date','description','project','client','type','amount','currency','status','notes'];
+
+function getTransactions() {
+  const ss    = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(TRANSACTIONS_SHEET);
+  if (!sheet || sheet.getLastRow() < 2) return [];
+  const data = sheet.getDataRange().getValues();
+  const h    = data[0].map(x => String(x).toLowerCase().trim());
+  return data.slice(1).map(row => {
+    const t = {};
+    h.forEach((k, i) => {
+      if (k === 'date') t.date = fmtDate(row[i]);
+      else if (k === 'amount') t.amount = Number(row[i]) || 0;
+      else t[k] = row[i] === '' ? '' : String(row[i]);
+    });
+    return t;
+  }).filter(t => t.id);
+}
+
+function saveTransaction(tx) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName(TRANSACTIONS_SHEET);
+  if (!sheet) {
+    sheet = ss.insertSheet(TRANSACTIONS_SHEET);
+    sheet.appendRow(TX_HEADERS);
+  }
+
+  const existingH = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0].map(String);
+  TX_HEADERS.forEach(h => {
+    if (!existingH.includes(h)) { existingH.push(h); sheet.getRange(1, existingH.length).setValue(h); }
+  });
+  const rawH = existingH.map(h => h.toLowerCase().trim());
+
+  if (!tx.id) tx.id = String(Date.now());
+  const row = rawH.map(h => tx[h] !== undefined ? tx[h] : '');
+
+  if (sheet.getLastRow() > 1) {
+    const idCol = rawH.indexOf('id') + 1;
+    const ids   = sheet.getRange(2, idCol, sheet.getLastRow() - 1, 1).getValues().flat().map(String);
+    const idx   = ids.indexOf(String(tx.id));
+    if (idx >= 0) {
+      sheet.getRange(idx + 2, 1, 1, row.length).setValues([row]);
+      return { success: true, id: tx.id };
+    }
+  }
+  sheet.appendRow(row);
+  return { success: true, id: tx.id };
+}
+
+function deleteTransaction(id) {
+  const ss    = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(TRANSACTIONS_SHEET);
+  if (!sheet || sheet.getLastRow() < 2) return { success: false };
+  const rawH  = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0].map(h => String(h).toLowerCase().trim());
+  const idCol = rawH.indexOf('id') + 1;
+  if (idCol < 1) return { success: false };
+  const ids   = sheet.getRange(2, idCol, sheet.getLastRow() - 1, 1).getValues().flat().map(String);
+  const row   = ids.indexOf(String(id));
   if (row >= 0) { sheet.deleteRow(row + 2); return { success: true }; }
   return { success: false };
 }
