@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>kinn Assignment Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&family=Roboto+Slab:wght@400;700&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; }
+body { margin: 0; padding: 0; background: #eaeaea; font-family: 'Sarabun', sans-serif; color: #333; }
+
+/* ---- App shell ---- */
+.app-header { background: #2c3e50; color: #ecf0f1; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.3); position: sticky; top: 0; z-index: 100; }
+.app-header h1 { margin: 0; font-family: 'Roboto Slab', serif; font-size: 1.25em; }
+.app-header .sub { font-size: 0.8em; opacity: 0.7; }
+.lang-toggle { display: flex; gap: 6px; }
+.lang-toggle button { padding: 4px 12px; border: 1px solid #ecf0f1; background: transparent; color: #ecf0f1; border-radius: 14px; cursor: pointer; font-family: inherit; font-size: 0.82em; font-weight: 600; }
+.lang-toggle button.active { background: #2980b9; border-color: #2980b9; }
+
+.container { width: 96%; max-width: 1360px; margin: 20px auto; background: #fff; border-radius: 10px; box-shadow: 0 0 20px rgba(0,0,0,0.08); padding: 20px; }
+
+/* ---- Tabs ---- */
+.tabs { display: flex; flex-wrap: wrap; gap: 5px; border-bottom: 2px solid #e1e5ea; margin-bottom: 20px; }
+.tab-btn { background: #f1f3f5; border: none; border-radius: 6px 6px 0 0; padding: 9px 14px; cursor: pointer; font-family: inherit; font-size: 0.86em; font-weight: 600; color: #5a6673; transition: all .15s; }
+.tab-btn:hover { background: #e2e6ea; }
+.tab-btn.active { background: #2980b9; color: #fff; }
+.tab-pane { display: none; }
+.tab-pane.active { display: block; }
+
+/* ---- Loading overlay ---- */
+.overlay { position: fixed; inset: 0; background: rgba(44,62,80,0.45); display: flex; align-items: center; justify-content: center; z-index: 999; }
+.spinner { width: 48px; height: 48px; border: 5px solid #fff3; border-top-color: #fff; border-radius: 50%; animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ---- Summary cards ---- */
+.summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(145px, 1fr)); gap: 12px; margin-bottom: 20px; }
+.card { background: #f8f9fa; border-radius: 8px; padding: 13px; text-align: center; border-left: 4px solid #2980b9; }
+.card.todo   { border-left-color: #95a5a6; }
+.card.inprog { border-left-color: #f39c12; }
+.card.done   { border-left-color: #27ae60; }
+.card.over   { border-left-color: #e74c3c; }
+.card.today  { border-left-color: #8e44ad; }
+.card .label { font-size: 0.74em; color: #7f8c8d; text-transform: uppercase; letter-spacing: .5px; }
+.card .value { font-size: 1.6em; font-weight: 700; color: #2c3e50; margin-top: 4px; }
+
+/* ---- Charts ---- */
+.charts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-bottom: 22px; }
+.chart-box { background: #f8f9fa; border-radius: 8px; padding: 14px; }
+.chart-box h3 { font-family: 'Roboto Slab', serif; font-size: .95em; margin: 0 0 12px; color: #2c3e50; }
+.donut-wrap { display: flex; align-items: center; gap: 14px; }
+.donut { width: 110px; height: 110px; border-radius: 50%; flex-shrink: 0; position: relative; }
+.donut::after { content:''; position:absolute; inset:24px; background:#f8f9fa; border-radius:50%; }
+.donut-center { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:2; }
+.donut-center b { font-size:1.2em; color:#2c3e50; }
+.donut-center small { font-size:.65em; color:#7f8c8d; }
+.legend { font-size: .8em; }
+.legend div { display: flex; align-items: center; gap: 7px; margin-bottom: 5px; }
+.legend i { width: 11px; height: 11px; border-radius: 3px; display: inline-block; flex-shrink: 0; }
+.bar-row { display: grid; grid-template-columns: 110px 1fr 34px; align-items: center; gap: 8px; margin-bottom: 7px; font-size: .8em; }
+.bar-track { background: #e6e9ed; border-radius: 5px; height: 16px; overflow: hidden; }
+.bar-fill { height: 100%; background: linear-gradient(90deg, #2980b9, #5dade2); border-radius: 5px; }
+
+/* ---- Forms ---- */
+.section-header { font-family: 'Roboto Slab', serif; color: #2c3e50; font-size: 1.15em; margin: 22px 0 12px; border-bottom: 2px solid #ddd; padding-bottom: 7px; }
+.form-section { background: #f8f9fa; border-radius: 8px; padding: 16px; margin-bottom: 18px; }
+.form-section h2 { font-family: 'Roboto Slab', serif; color: #2980b9; font-size: 1.05em; margin: 0 0 12px; border-bottom: 2px solid #ddd; padding-bottom: 6px; }
+.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(165px, 1fr)); gap: 10px; }
+.form-group { display: flex; flex-direction: column; }
+.form-group.span2 { grid-column: span 2; }
+.form-group label { font-size: .8em; font-weight: 600; color: #555; margin-bottom: 3px; }
+.form-group input, .form-group select, .form-group textarea { padding: 7px 9px; border: 1px solid #ccc; border-radius: 5px; font-family: inherit; font-size: .88em; color: #333; background: #fff; }
+.form-group textarea { resize: vertical; min-height: 44px; }
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: #2980b9; }
+.form-actions { margin-top: 12px; display: flex; gap: 9px; align-items: center; flex-wrap: wrap; }
+
+/* ---- Buttons ---- */
+.btn { padding: 7px 15px; border: none; border-radius: 5px; cursor: pointer; font-family: inherit; font-size: .88em; font-weight: 600; transition: opacity .15s; }
+.btn:hover { opacity: .85; }
+.btn-primary { background: #2980b9; color: #fff; }
+.btn-danger  { background: #e74c3c; color: #fff; padding: 3px 9px; font-size: .77em; }
+.btn-edit    { background: #f39c12; color: #fff; padding: 3px 9px; font-size: .77em; }
+.btn-cancel  { background: #95a5a6; color: #fff; }
+.btn-ghost   { background: #e2e6ea; color: #2c3e50; }
+.btn-sm      { padding: 5px 10px; font-size: .8em; }
+
+/* ---- Filter bar ---- */
+.filter-bar { display: flex; gap: 9px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
+.filter-bar select, .filter-bar input { padding: 6px 9px; border: 1px solid #ccc; border-radius: 5px; font-family: inherit; font-size: .84em; }
+
+/* ---- Table ---- */
+.table-wrap { overflow-x: auto; border-radius: 8px; border: 1px solid #e1e5ea; }
+table.data { width: 100%; border-collapse: collapse; font-size: .83em; }
+table.data th { background: #2c3e50; color: #fff; padding: 8px 9px; text-align: left; font-weight: 600; white-space: nowrap; position: sticky; top: 0; }
+table.data td { padding: 7px 9px; border-bottom: 1px solid #eef1f4; vertical-align: middle; }
+table.data tbody tr:hover { background: #f5f9fd; }
+table.data tr.is-done td { opacity: .6; }
+table.data tr.is-over td.c-due { color: #e74c3c; font-weight: 700; }
+.progress { background: #e6e9ed; border-radius: 6px; height: 15px; width: 88px; overflow: hidden; position: relative; }
+.progress > span { display: block; height: 100%; background: linear-gradient(90deg,#27ae60,#2ecc71); }
+.progress > i { position: absolute; left:0; right:0; top:0; line-height:15px; text-align:center; font-size:.7em; font-style:normal; color:#2c3e50; font-weight:600; }
+.pill { display: inline-block; padding: 2px 8px; border-radius: 9px; font-size: .73em; font-weight: 600; white-space: nowrap; }
+
+/* ---- Eisenhower ---- */
+.eisen-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.eisen-q { border-radius: 8px; padding: 12px; min-height: 140px; border-top: 5px solid; }
+.eisen-q h3 { margin: 0 0 3px; font-family: 'Roboto Slab', serif; font-size: .98em; }
+.eisen-q .qsub { font-size: .74em; color: #7f8c8d; margin-bottom: 10px; }
+.q1 { background: #fdecea; border-color: #e74c3c; } .q1 h3 { color: #b03a2e; }
+.q2 { background: #eafaf1; border-color: #27ae60; } .q2 h3 { color: #1e8449; }
+.q3 { background: #fef5e7; border-color: #f39c12; } .q3 h3 { color: #b9770e; }
+.q4 { background: #f4f6f7; border-color: #95a5a6; } .q4 h3 { color: #5d6d7e; }
+.quad-stats { display: flex; align-items: center; gap: 12px; background: rgba(255,255,255,.55); border-radius: 7px; padding: 7px 10px; margin-bottom: 10px; }
+.quad-donut { width: 64px; height: 64px; border-radius: 50%; position: relative; flex-shrink: 0; }
+.quad-donut::after { content:''; position:absolute; inset:13px; background:#fff; border-radius:50%; }
+.quad-donut .donut-center b { font-size: .88em; }
+.quad-donut .donut-center small { font-size: .56em; }
+.quad-count b { font-size: 1.4em; color: #2c3e50; display: block; }
+.quad-count span { font-size: .7em; color: #7f8c8d; }
+.mini-card { background: #fff; border-radius: 6px; padding: 8px 10px; margin-bottom: 7px; box-shadow: 0 1px 3px rgba(0,0,0,.07); font-size: .84em; }
+.mini-card .mc-title { font-weight: 600; color: #2c3e50; }
+.mini-card .mc-meta { font-size: .8em; color: #7f8c8d; margin-top: 2px; }
+.mini-card .progress { width: 100%; margin-top: 5px; }
+
+/* ---- Calendar ---- */
+.cal-controls { display: flex; gap: 9px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
+.cal-dow { text-align: center; font-weight: 700; font-size: .77em; background: #2c3e50; color: #fff; padding: 5px 0; border-radius: 4px; }
+.cal-cell { min-height: 86px; background: #f8f9fa; border-radius: 5px; padding: 4px; border: 1px solid #eef1f4; font-size: .72em; overflow: hidden; }
+.cal-cell.other { background: #f1f3f5; opacity: .5; }
+.cal-cell.today { border: 2px solid #2980b9; background: #eaf3fb; }
+.cal-daynum { font-weight: 700; color: #5a6673; margin-bottom: 2px; }
+.cal-ev { background: #d6eaf8; color: #1b4f72; border-radius: 3px; padding: 2px 3px; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cal-ev.ev-done { background: #d5f5e3; color: #1d6a3a; }
+.cal-ev.ev-over { background: #fadbd8; color: #922b21; }
+
+/* ---- Kanban ---- */
+.kanban { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(220px, 1fr); gap: 12px; overflow-x: auto; padding-bottom: 8px; }
+.kanban-col { background: #f8f9fa; border-radius: 8px; padding: 11px; min-height: 180px; }
+.kanban-col-header { font-family: 'Roboto Slab', serif; font-size: .92em; font-weight: 700; margin-bottom: 10px; padding-bottom: 7px; border-bottom: 3px solid #bdc3c7; display: flex; align-items: center; justify-content: space-between; }
+.kanban-card { background: #fff; border-radius: 6px; padding: 9px 11px; margin-bottom: 8px; box-shadow: 0 1px 4px rgba(0,0,0,.07); border-left: 4px solid #ddd; }
+.kanban-card.prio-high   { border-left-color: #e74c3c; }
+.kanban-card.prio-medium { border-left-color: #f39c12; }
+.kanban-card.prio-low    { border-left-color: #27ae60; }
+.kanban-card .kc-title { font-weight: 600; font-size: .86em; color: #2c3e50; margin-bottom: 4px; }
+.kanban-card .kc-meta  { font-size: .76em; color: #7f8c8d; display: flex; gap: 5px; flex-wrap: wrap; align-items: center; }
+.badge-count { background: #7f8c8d; color: #fff; border-radius: 9px; padding: 1px 7px; font-size: .74em; }
+
+/* ---- Team KPI ---- */
+.kpi-top { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-bottom: 18px; align-items: start; }
+.weights-box { background: #f8f9fa; border-radius: 8px; padding: 14px; }
+.weights-box h3 { font-family: 'Roboto Slab', serif; font-size: .95em; margin: 0 0 10px; color: #2c3e50; }
+.weight-row { display: grid; grid-template-columns: 1fr 64px 18px; align-items: center; gap: 7px; margin-bottom: 9px; font-size: .84em; }
+.weight-row input { padding: 5px 7px; border: 1px solid #ccc; border-radius: 4px; font-family: inherit; text-align: right; }
+.weight-total { display: flex; justify-content: space-between; align-items: center; border-top: 1px dashed #ccc; padding-top: 8px; font-weight: 700; font-size: .88em; }
+.weight-total .ok { color: #27ae60; } .weight-total .bad { color: #e74c3c; }
+.kpi-range { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
+.kpi-range input { padding: 5px 8px; border: 1px solid #ccc; border-radius: 5px; font-family: inherit; font-size: .84em; }
+.score-cell { font-weight: 700; color: #2c3e50; }
+
+/* ---- Setup ---- */
+.setup-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+.chip-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+.chip { display: flex; align-items: center; gap: 7px; background: #fff; border: 1px solid #e1e5ea; border-radius: 6px; padding: 5px 9px; font-size: .84em; }
+.chip .grow { flex: 1; }
+.chip .swatch { width: 13px; height: 13px; border-radius: 3px; flex-shrink: 0; }
+.chip input.inline { border: 1px solid #ddd; border-radius: 4px; padding: 3px 5px; font-family: inherit; font-size: .92em; }
+.add-inline { display: flex; gap: 6px; margin-top: 5px; }
+.add-inline input { flex: 1; padding: 6px 8px; border: 1px solid #ccc; border-radius: 5px; font-family: inherit; font-size: .84em; }
+
+/* ---- Misc ---- */
+.hint { background: #fff8e1; border-left: 4px solid #f1c40f; border-radius: 5px; padding: 10px 13px; font-size: .84em; color: #6b5900; margin-bottom: 14px; }
+.empty { text-align: center; color: #bdc3c7; font-size: .84em; padding: 16px 0; }
+.instr h3 { font-family: 'Roboto Slab', serif; color: #2980b9; margin: 16px 0 5px; }
+.instr p, .instr li { line-height: 1.7; color: #34495e; font-size: .93em; }
+.toolbar { display: flex; gap: 7px; flex-wrap: wrap; margin-bottom: 14px; }
+
+@media (max-width: 700px) {
+  .eisen-grid, .kpi-top { grid-template-columns: 1fr; }
+  .form-group.span2 { grid-column: span 1; }
+  .summary-grid { grid-template-columns: repeat(2,1fr); }
+}
+</style>
+</head>
+<body>
+
+<div class="app-header">
+  <div>
+    <h1 data-i18n="appTitle">Assignment Tracker</h1>
+    <div class="sub" data-i18n="appSubtitle">Powered by Google Sheets</div>
+  </div>
+  <div class="lang-toggle">
+    <button id="langTH" onclick="setLang('th')">ไทย</button>
+    <button id="langEN" onclick="setLang('en')">EN</button>
+  </div>
+</div>
+
+<div class="container">
+  <div class="tabs" id="tabBar">
+    <button class="tab-btn active" data-tab="instructions" data-i18n="tabInstructions">📋 คู่มือ</button>
+    <button class="tab-btn" data-tab="setup"        data-i18n="tabSetup">⚙️ ตั้งค่า</button>
+    <button class="tab-btn" data-tab="tracker"      data-i18n="tabTracker">✅ Tracker</button>
+    <button class="tab-btn" data-tab="eisen"        data-i18n="tabEisen">⚡ Eisenhower</button>
+    <button class="tab-btn" data-tab="calendar"     data-i18n="tabCalendar">📅 ปฏิทิน</button>
+    <button class="tab-btn" data-tab="kanban"       data-i18n="tabKanban">📊 Kanban</button>
+    <button class="tab-btn" data-tab="kpi"          data-i18n="tabKpi">👥 Team KPI</button>
+  </div>
+
+  <!-- INSTRUCTIONS -->
+  <div class="tab-pane active" id="pane-instructions">
+    <div class="instr" id="instrContent"></div>
+  </div>
+
+  <!-- SETUP -->
+  <div class="tab-pane" id="pane-setup">
+    <div class="hint" data-i18n="setupHint">ตั้งค่าครั้งเดียว บันทึกลง Google Sheets อัตโนมัติ</div>
+    <div class="setup-cols">
+      <div class="form-section"><h2 data-i18n="setupProjects">โครงการ</h2>
+        <div class="chip-list" id="listProjects"></div>
+        <div class="add-inline"><input type="text" id="newProject" placeholder="เพิ่มโครงการ..."><button class="btn btn-primary btn-sm" onclick="addProject()" data-i18n="add">เพิ่ม</button></div>
+      </div>
+      <div class="form-section"><h2 data-i18n="setupCategories">หมวดหมู่</h2>
+        <div class="chip-list" id="listCategories"></div>
+        <div class="add-inline"><input type="text" id="newCategory" placeholder="เพิ่มหมวดหมู่..."><button class="btn btn-primary btn-sm" onclick="addCategory()" data-i18n="add">เพิ่ม</button></div>
+      </div>
+      <div class="form-section"><h2 data-i18n="setupOwners">ผู้รับผิดชอบ</h2>
+        <div class="chip-list" id="listOwners"></div>
+        <div class="add-inline"><input type="text" id="newOwner" placeholder="เพิ่มผู้รับผิดชอบ..."><button class="btn btn-primary btn-sm" onclick="addOwner()" data-i18n="add">เพิ่ม</button></div>
+      </div>
+      <div class="form-section"><h2 data-i18n="setupStatuses">สถานะ</h2>
+        <div class="chip-list" id="listStatuses"></div>
+        <div class="add-inline">
+          <input type="text" id="newStatusName" placeholder="ชื่อสถานะ...">
+          <input type="number" id="newStatusPct" min="0" max="100" value="0" style="max-width:60px">
+          <button class="btn btn-primary btn-sm" onclick="addStatus()" data-i18n="add">เพิ่ม</button>
+        </div>
+      </div>
+    </div>
+    <div class="form-actions" style="margin-top:12px">
+      <button class="btn btn-ghost btn-sm" onclick="pushConfig()" data-i18n="saveConfig">💾 บันทึก Config ลง Sheet</button>
+    </div>
+  </div>
+
+  <!-- TRACKER -->
+  <div class="tab-pane" id="pane-tracker">
+    <div class="summary-grid">
+      <div class="card"><div class="label" data-i18n="cTotal">ทั้งหมด</div><div class="value" id="sumTotal">0</div></div>
+      <div class="card inprog"><div class="label" data-i18n="cInProgress">กำลังทำ</div><div class="value" id="sumInprog">0</div></div>
+      <div class="card done"><div class="label" data-i18n="cDone">เสร็จแล้ว</div><div class="value" id="sumDone">0</div></div>
+      <div class="card today"><div class="label" data-i18n="cDueToday">ครบกำหนดวันนี้</div><div class="value" id="sumToday">0</div></div>
+      <div class="card over"><div class="label" data-i18n="cOverdue">เลยกำหนด</div><div class="value" id="sumOver">0</div></div>
+    </div>
+    <div class="charts-grid">
+      <div class="chart-box"><h3 data-i18n="chartStatus">ภาพรวมสถานะ</h3>
+        <div class="donut-wrap">
+          <div class="donut" id="statusDonut"><div class="donut-center"><b id="donutPct">0%</b><small data-i18n="complete">เสร็จ</small></div></div>
+          <div class="legend" id="statusLegend"></div>
+        </div>
+      </div>
+      <div class="chart-box"><h3 data-i18n="chartProject">แยกตามโครงการ</h3><div id="projectBars"></div></div>
+      <div class="chart-box"><h3 data-i18n="chartOwner">แยกตามผู้รับผิดชอบ</h3><div id="ownerBars"></div></div>
+    </div>
+
+    <div class="section-header" data-i18n="addAssignment">เพิ่มงาน</div>
+    <div class="form-section">
+      <h2 id="formTitle" data-i18n="newAssignment">งานใหม่</h2>
+      <input type="hidden" id="editId">
+      <div class="form-grid">
+        <div class="form-group span2"><label data-i18n="fTask">งาน *</label><input type="text" id="fTask" placeholder="ต้องทำอะไร?"></div>
+        <div class="form-group"><label data-i18n="fProject">โครงการ</label><select id="fProject"></select></div>
+        <div class="form-group"><label data-i18n="fCategory">หมวดหมู่</label><select id="fCategory"></select></div>
+        <div class="form-group"><label data-i18n="fOwner">ผู้รับผิดชอบ</label><select id="fOwner"></select></div>
+        <div class="form-group"><label data-i18n="fStatus">สถานะ</label><select id="fStatus" onchange="syncPct()"></select></div>
+        <div class="form-group"><label data-i18n="fImportance">ความสำคัญ</label>
+          <select id="fImportance"><option value="high">สำคัญ</option><option value="low">ไม่สำคัญ</option></select></div>
+        <div class="form-group"><label data-i18n="fUrgency">ความเร่งด่วน</label>
+          <select id="fUrgency"><option value="high">ด่วน</option><option value="low">ไม่ด่วน</option></select></div>
+        <div class="form-group"><label data-i18n="fStart">วันเริ่ม</label><input type="date" id="fStart"></div>
+        <div class="form-group"><label data-i18n="fDue">กำหนดส่ง</label><input type="date" id="fDue"></div>
+        <div class="form-group"><label data-i18n="fProgress">คืบหน้า %</label><input type="number" id="fProgress" min="0" max="100" value="0"></div>
+        <div class="form-group span2"><label data-i18n="fNotes">หมายเหตุ</label><textarea id="fNotes" placeholder="หมายเหตุเพิ่มเติม..."></textarea></div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-primary" onclick="saveAssignment()" data-i18n="save">บันทึก</button>
+        <button class="btn btn-cancel" id="cancelBtn" onclick="clearForm()" style="display:none" data-i18n="cancel">ยกเลิก</button>
+        <span id="formError" style="color:#e74c3c;font-size:.84em"></span>
+      </div>
+    </div>
+
+    <div class="section-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <span data-i18n="allAssignments">งานทั้งหมด</span>
+      <div class="filter-bar" style="margin:0">
+        <select id="filtProject" onchange="renderAll()"></select>
+        <select id="filtOwner" onchange="renderAll()"></select>
+        <select id="filtStatus" onchange="renderAll()"></select>
+        <input type="text" id="filtSearch" placeholder="ค้นหา..." oninput="renderAll()">
+      </div>
+    </div>
+    <div class="toolbar">
+      <button class="btn btn-ghost btn-sm" onclick="exportCSV()" data-i18n="exportCsv">Export CSV</button>
+      <button class="btn btn-ghost btn-sm" onclick="reloadData()" data-i18n="refresh">🔄 Refresh จาก Sheets</button>
+    </div>
+    <div class="table-wrap"><table class="data"><thead><tr id="tableHead"></tr></thead><tbody id="tableBody"></tbody></table></div>
+  </div>
+
+  <!-- EISENHOWER -->
+  <div class="tab-pane" id="pane-eisen">
+    <div class="hint" data-i18n="eisenHint">งานแบ่งออกเป็น 4 กลุ่มตามความสำคัญและความเร่งด่วน</div>
+    <div class="eisen-grid">
+      <div class="eisen-q q1"><h3 data-i18n="q1Title">ทำทันที</h3><div class="qsub" data-i18n="q1Sub">สำคัญ & ด่วน</div>
+        <div class="quad-stats"><div class="quad-donut" id="quad1Donut"><div class="donut-center"><b id="quad1Pct">0%</b><small>เสร็จ</small></div></div><div class="quad-count"><b id="quad1Cnt">0</b><span>งาน</span></div></div>
+        <div id="quad1"></div></div>
+      <div class="eisen-q q2"><h3 data-i18n="q2Title">วางแผน</h3><div class="qsub" data-i18n="q2Sub">สำคัญ & ไม่ด่วน</div>
+        <div class="quad-stats"><div class="quad-donut" id="quad2Donut"><div class="donut-center"><b id="quad2Pct">0%</b><small>เสร็จ</small></div></div><div class="quad-count"><b id="quad2Cnt">0</b><span>งาน</span></div></div>
+        <div id="quad2"></div></div>
+      <div class="eisen-q q3"><h3 data-i18n="q3Title">มอบหมาย</h3><div class="qsub" data-i18n="q3Sub">ไม่สำคัญ & ด่วน</div>
+        <div class="quad-stats"><div class="quad-donut" id="quad3Donut"><div class="donut-center"><b id="quad3Pct">0%</b><small>เสร็จ</small></div></div><div class="quad-count"><b id="quad3Cnt">0</b><span>งาน</span></div></div>
+        <div id="quad3"></div></div>
+      <div class="eisen-q q4"><h3 data-i18n="q4Title">ตัดทิ้ง</h3><div class="qsub" data-i18n="q4Sub">ไม่สำคัญ & ไม่ด่วน</div>
+        <div class="quad-stats"><div class="quad-donut" id="quad4Donut"><div class="donut-center"><b id="quad4Pct">0%</b><small>เสร็จ</small></div></div><div class="quad-count"><b id="quad4Cnt">0</b><span>งาน</span></div></div>
+        <div id="quad4"></div></div>
+    </div>
+  </div>
+
+  <!-- CALENDAR -->
+  <div class="tab-pane" id="pane-calendar">
+    <div class="cal-controls">
+      <button class="btn btn-ghost btn-sm" onclick="calMove(-1)">◀</button>
+      <strong id="calTitle" style="min-width:150px;text-align:center"></strong>
+      <button class="btn btn-ghost btn-sm" onclick="calMove(1)">▶</button>
+      <button class="btn btn-ghost btn-sm" onclick="calToday()">วันนี้</button>
+      <select id="calOwnerFilter" onchange="renderCalendar()" style="margin-left:auto"></select>
+    </div>
+    <div class="cal-grid" id="calGrid"></div>
+  </div>
+
+  <!-- KANBAN -->
+  <div class="tab-pane" id="pane-kanban">
+    <div class="filter-bar">
+      <select id="kanProjectFilter" onchange="renderKanban()"></select>
+      <select id="kanOwnerFilter" onchange="renderKanban()"></select>
+    </div>
+    <div class="kanban" id="kanbanBoard"></div>
+  </div>
+
+  <!-- TEAM KPI -->
+  <div class="tab-pane" id="pane-kpi">
+    <div class="hint" data-i18n="kpiHint">ผลการทำงานรายคน — ตั้งน้ำหนักเกณฑ์ได้เอง รวม 100%</div>
+    <div class="summary-grid">
+      <div class="card"><div class="label">ผู้รับผิดชอบ</div><div class="value" id="kpiSumOwners">0</div></div>
+      <div class="card inprog"><div class="label">งานทั้งหมด</div><div class="value" id="kpiSumTasks">0</div></div>
+      <div class="card over"><div class="label">คนที่เลยกำหนด</div><div class="value" id="kpiSumOverP">0</div></div>
+      <div class="card done"><div class="label">ความคืบหน้ารวม</div><div class="value" id="kpiSumProg">0%</div></div>
+    </div>
+    <div class="kpi-range">
+      <label style="font-size:.84em;font-weight:600;color:#555">ช่วงวันกำหนดส่ง:</label>
+      <input type="date" id="kpiFrom" onchange="renderKPI()">
+      <span>–</span>
+      <input type="date" id="kpiTo" onchange="renderKPI()">
+      <button class="btn btn-ghost btn-sm" onclick="clearKpiRange()">ล้าง</button>
+    </div>
+    <div class="kpi-top">
+      <div class="table-wrap"><table class="data kpi-table"><thead><tr id="kpiHead"></tr></thead><tbody id="kpiBody"></tbody></table></div>
+      <div class="weights-box">
+        <h3>น้ำหนักเกณฑ์ KPI</h3>
+        <div class="weight-row"><span>อัตราเสร็จ</span><input type="number" id="wCompletion" min="0" max="100" onchange="saveWeights()"><span>%</span></div>
+        <div class="weight-row"><span>ส่งตรงเวลา</span><input type="number" id="wOnTime" min="0" max="100" onchange="saveWeights()"><span>%</span></div>
+        <div class="weight-row"><span>ความคืบหน้า</span><input type="number" id="wProgress" min="0" max="100" onchange="saveWeights()"><span>%</span></div>
+        <div class="weight-total"><span>รวม</span><span id="wTotalVal">100%</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- loading overlay -->
+<div class="overlay" id="loadingOverlay"><div class="spinner"></div></div>
+
+<script>
+// ============================================================
+//  Client-side JS — communicates with Code.gs via google.script.run
+// ============================================================
+const PALETTE = ['#2980b9','#27ae60','#f39c12','#8e44ad','#e74c3c','#16a085','#d35400','#2c3e50'];
+
+let allData   = [];   // tasks from Sheet
+let cfg       = {};   // config from Sheet
+let lang      = 'th';
+
+/* ---------- i18n (minimal bilingual) ---------- */
+const I18N = {
+  th: { appTitle:'ตารางมอบหมายงาน', appSubtitle:'เชื่อมต่อ Google Sheets อัตโนมัติ',
+    tabInstructions:'📋 คู่มือ', tabSetup:'⚙️ ตั้งค่า', tabTracker:'✅ Tracker',
+    tabEisen:'⚡ Eisenhower', tabCalendar:'📅 ปฏิทิน', tabKanban:'📊 Kanban', tabKpi:'👥 Team KPI',
+    setupHint:'ตั้งค่าครั้งเดียว บันทึกลง Google Sheets อัตโนมัติ',
+    setupProjects:'โครงการ', setupCategories:'หมวดหมู่', setupOwners:'ผู้รับผิดชอบ', setupStatuses:'สถานะ',
+    add:'เพิ่ม', saveConfig:'💾 บันทึก Config ลง Sheet',
+    cTotal:'ทั้งหมด', cInProgress:'กำลังทำ', cDone:'เสร็จแล้ว', cDueToday:'ครบกำหนดวันนี้', cOverdue:'เลยกำหนด',
+    chartStatus:'ภาพรวมสถานะ', chartProject:'แยกตามโครงการ', chartOwner:'แยกตามผู้รับผิดชอบ', complete:'เสร็จ',
+    addAssignment:'เพิ่มงาน', newAssignment:'งานใหม่', editAssignment:'แก้ไขงาน',
+    fTask:'งาน *', fProject:'โครงการ', fCategory:'หมวดหมู่', fOwner:'ผู้รับผิดชอบ', fStatus:'สถานะ',
+    fImportance:'ความสำคัญ', fUrgency:'ความเร่งด่วน', fStart:'วันเริ่ม', fDue:'กำหนดส่ง',
+    fProgress:'คืบหน้า %', fNotes:'หมายเหตุ', save:'บันทึก', cancel:'ยกเลิก',
+    allAssignments:'งานทั้งหมด', exportCsv:'Export CSV', refresh:'🔄 Refresh จาก Sheets',
+    thTask:'งาน', thProject:'โครงการ', thCategory:'หมวดหมู่', thOwner:'ผู้รับผิดชอบ',
+    thStatus:'สถานะ', thProgress:'คืบหน้า', thDue:'กำหนดส่ง', thActions:'จัดการ',
+    edit:'แก้ไข', del:'ลบ',
+    eisenHint:'งานแบ่งออกเป็น 4 กลุ่มตามความสำคัญและความเร่งด่วน',
+    q1Title:'ทำทันที', q1Sub:'สำคัญ & ด่วน', q2Title:'วางแผน', q2Sub:'สำคัญ & ไม่ด่วน',
+    q3Title:'มอบหมาย', q3Sub:'ไม่สำคัญ & ด่วน', q4Title:'ตัดทิ้ง', q4Sub:'ไม่สำคัญ & ไม่ด่วน',
+    kpiHint:'ผลการทำงานรายคน — ตั้งน้ำหนักเกณฑ์ได้เอง รวม 100%',
+    kpiOwner:'ผู้รับผิดชอบ', kpiTotal:'ทั้งหมด', kpiInprog:'กำลังทำ', kpiDone:'เสร็จ', kpiOver:'เลยกำหนด', kpiRate:'อัตราเสร็จ', kpiScore:'คะแนน KPI',
+    noData:'ยังไม่มีข้อมูล', confirmDelete:'ลบงานนี้?', unassigned:'ยังไม่กำหนด', overdueWord:'เลยกำหนด',
+    instr:`<h3>ยินดีต้อนรับ 👋</h3>
+    <p>เครื่องมือติดตามงาน 7 แท็บ ที่ใช้ <b>Google Sheets</b> เป็นฐานข้อมูล — แก้ใน Sheets แล้ว Refresh หน้านี้ข้อมูลก็อัปเดตทันที</p>
+    <h3>วิธีใช้</h3>
+    <ol>
+    <li>เพิ่มงานได้ที่แท็บ <b>Tracker</b> — ระบบบันทึกลง Sheet ให้อัตโนมัติ</li>
+    <li>กด <b>Refresh จาก Sheets</b> เมื่อแก้ข้อมูลตรงใน Google Sheets โดยตรง</li>
+    <li>ตั้งค่า โครงการ / หมวดหมู่ / ผู้รับผิดชอบ / สถานะ ได้ที่แท็บ <b>ตั้งค่า</b></li>
+    <li>แท็บ Eisenhower, ปฏิทิน, Kanban, KPI อัปเดตตามข้อมูลใน Tracker อัตโนมัติ</li>
+    </ol>
+    <h3>โครงสร้าง Sheet ที่รองรับ</h3>
+    <p>Sheet ชื่อ <b>Tasks</b> ต้องมี column: <code>id, title, description, owner, department, client, startDate, dueDate, progress, status, priority, type, notes</code></p>`
+  },
+  en: { appTitle:'Assignment Tracker', appSubtitle:'Powered by Google Sheets',
+    tabInstructions:'📋 Instructions', tabSetup:'⚙️ Set up', tabTracker:'✅ Tracker',
+    tabEisen:'⚡ Eisenhower', tabCalendar:'📅 Calendar', tabKanban:'📊 Kanban', tabKpi:'👥 Team KPI',
+    setupHint:'Configure once — saved directly to Google Sheets.',
+    setupProjects:'Projects', setupCategories:'Categories', setupOwners:'Owners', setupStatuses:'Statuses',
+    add:'Add', saveConfig:'💾 Save config to Sheet',
+    cTotal:'Total', cInProgress:'In Progress', cDone:'Completed', cDueToday:'Due Today', cOverdue:'Overdue',
+    chartStatus:'Status overview', chartProject:'By project', chartOwner:'By owner', complete:'complete',
+    addAssignment:'Add assignment', newAssignment:'New assignment', editAssignment:'Edit assignment',
+    fTask:'Task *', fProject:'Project', fCategory:'Category', fOwner:'Owner', fStatus:'Status',
+    fImportance:'Importance', fUrgency:'Urgency', fStart:'Start date', fDue:'Due date',
+    fProgress:'Progress %', fNotes:'Notes', save:'Save', cancel:'Cancel',
+    allAssignments:'All assignments', exportCsv:'Export CSV', refresh:'🔄 Refresh from Sheets',
+    thTask:'Task', thProject:'Project', thCategory:'Category', thOwner:'Owner',
+    thStatus:'Status', thProgress:'Progress', thDue:'Due', thActions:'Actions',
+    edit:'Edit', del:'Del',
+    eisenHint:'Tasks split into 4 quadrants by importance × urgency.',
+    q1Title:'Do first', q1Sub:'Important & Urgent', q2Title:'Schedule', q2Sub:'Important & Not urgent',
+    q3Title:'Delegate', q3Sub:'Not important & Urgent', q4Title:'Eliminate', q4Sub:'Not important & Not urgent',
+    kpiHint:'Per-person performance. Weights configurable, total = 100%.',
+    kpiOwner:'Owner', kpiTotal:'Total', kpiInprog:'In progress', kpiDone:'Done', kpiOver:'Overdue', kpiRate:'Completion', kpiScore:'KPI score',
+    noData:'No data yet.', confirmDelete:'Delete this task?', unassigned:'Unassigned', overdueWord:'overdue',
+    instr:`<h3>Welcome 👋</h3>
+    <p>A 7-tab assignment tracker backed by <b>Google Sheets</b>. Edit in Sheets, refresh here — data is always in sync.</p>
+    <h3>How to use</h3>
+    <ol>
+    <li>Add tasks in the <b>Tracker</b> tab — saved to your Sheet automatically.</li>
+    <li>Hit <b>Refresh from Sheets</b> after editing data directly in Google Sheets.</li>
+    <li>Configure projects, categories, owners and statuses in the <b>Set up</b> tab.</li>
+    <li>Eisenhower, Calendar, Kanban and KPI update automatically from Tracker data.</li>
+    </ol>
+    <h3>Required Sheet structure</h3>
+    <p>A sheet named <b>Tasks</b> with columns: <code>id, title, description, owner, department, client, startDate, dueDate, progress, status, priority, type, notes</code></p>`
+  }
+};
+function t(k){ return (I18N[lang]||I18N.th)[k] || (I18N.th[k]) || k; }
+
+function setLang(l){
+  lang = l;
+  document.getElementById('langTH').classList.toggle('active', l==='th');
+  document.getElementById('langEN').classList.toggle('active', l==='en');
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const v = t(el.getAttribute('data-i18n'));
+    if (v) el.innerHTML = v;
+  });
+  document.getElementById('instrContent').innerHTML = t('instr');
+  renderAll();
+}
+
+/* ---------- loading indicator ---------- */
+function showLoading(){ document.getElementById('loadingOverlay').style.display = 'flex'; }
+function hideLoading(){ document.getElementById('loadingOverlay').style.display = 'none'; }
+
+/* ---------- data helpers ---------- */
+function todayStr(){ return new Date().toISOString().slice(0,10); }
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function statusPct(name){ const s=(cfg.statuses||[]).find(x=>x.name===name); return s?Number(s.pct):0; }
+function statusColor(name){ const s=(cfg.statuses||[]).find(x=>x.name===name); return s?s.color:'#95a5a6'; }
+function isDone(a){ return statusPct(a.status)>=100; }
+function isOverdue(a){ return a.due && !isDone(a) && a.due < todayStr(); }
+
+/* ---------- tabs ---------- */
+document.getElementById('tabBar').addEventListener('click', e => {
+  const btn = e.target.closest('.tab-btn'); if(!btn) return;
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('pane-'+btn.dataset.tab).classList.add('active');
+});
+
+/* ---------- load from Apps Script ---------- */
+function reloadData(){
+  showLoading();
+  google.script.run
+    .withSuccessHandler(res => { allData = res.tasks; cfg = res.config; hideLoading(); renderAll(); })
+    .withFailureHandler(err => { hideLoading(); alert('Error loading data: ' + err.message); })
+    .getSheetData();
+}
+
+/* ---------- selects ---------- */
+function fillSelect(id, items, opts={}){
+  const el = document.getElementById(id); if(!el) return;
+  const cur = el.value;
+  let html = '';
+  if (opts.all) html += `<option value="">${esc(opts.all)}</option>`;
+  if (opts.blank) html += `<option value="">${esc(opts.blank)}</option>`;
+  items.forEach(it => {
+    const v = typeof it === 'object' ? it.name : it;
+    html += `<option value="${esc(v)}">${esc(v)}</option>`;
+  });
+  el.innerHTML = html;
+  if ([...el.options].some(o=>o.value===cur)) el.value = cur;
+}
+function refreshSelects(){
+  const projects   = cfg.projects   || [];
+  const categories = cfg.categories || [];
+  const owners     = cfg.owners     || [];
+  const statuses   = cfg.statuses   || [];
+  fillSelect('fProject',  projects,   {blank:'—'});
+  fillSelect('fCategory', categories, {blank:'—'});
+  fillSelect('fOwner',    owners,     {blank:t('unassigned')});
+  fillSelect('fStatus',   statuses);
+  fillSelect('filtProject', projects,   {all:t('cTotal')+' โครงการ'});
+  fillSelect('filtOwner',   owners,     {all:'ทุกคน'});
+  fillSelect('filtStatus',  statuses,   {all:'ทุกสถานะ'});
+  fillSelect('calOwnerFilter', owners,  {all:'ทุกคน'});
+  fillSelect('kanProjectFilter', projects, {all:'ทุกโครงการ'});
+  fillSelect('kanOwnerFilter',   owners,   {all:'ทุกคน'});
+}
+function syncPct(){
+  const s = (cfg.statuses||[]).find(x=>x.name===document.getElementById('fStatus').value);
+  if (s) document.getElementById('fProgress').value = s.pct;
+}
+
+/* ---------- CRUD ---------- */
+function saveAssignment(){
+  const id   = document.getElementById('editId').value;
+  const task = document.getElementById('fTask').value.trim();
+  if (!task){ document.getElementById('formError').textContent = t('fTask')+' ต้องกรอก'; return; }
+  document.getElementById('formError').textContent = '';
+
+  const rec = {
+    id:         id || String(Date.now()),
+    task,
+    project:    document.getElementById('fProject').value,
+    category:   document.getElementById('fCategory').value,
+    owner:      document.getElementById('fOwner').value,
+    status:     document.getElementById('fStatus').value,
+    importance: document.getElementById('fImportance').value,
+    urgency:    document.getElementById('fUrgency').value,
+    start:      document.getElementById('fStart').value,
+    due:        document.getElementById('fDue').value,
+    progress:   parseInt(document.getElementById('fProgress').value)||0,
+    notes:      document.getElementById('fNotes').value.trim()
+  };
+
+  // Optimistic update
+  const idx = allData.findIndex(x=>x.id===rec.id);
+  if (idx>=0) allData[idx]=rec; else allData.push(rec);
+  clearForm(); renderAll();
+
+  showLoading();
+  google.script.run
+    .withSuccessHandler(() => { hideLoading(); })
+    .withFailureHandler(err => { hideLoading(); alert('Save error: '+err.message); reloadData(); })
+    .saveTask(rec);
+}
+
+function editAssignment(id){
+  const a = allData.find(x=>x.id===id); if(!a) return;
+  document.getElementById('editId').value    = a.id;
+  document.getElementById('fTask').value     = a.task||'';
+  document.getElementById('fProject').value  = a.project||'';
+  document.getElementById('fCategory').value = a.category||'';
+  document.getElementById('fOwner').value    = a.owner||'';
+  document.getElementById('fStatus').value   = a.status||'';
+  document.getElementById('fImportance').value = a.importance||'high';
+  document.getElementById('fUrgency').value    = a.urgency||'high';
+  document.getElementById('fStart').value    = a.start||'';
+  document.getElementById('fDue').value      = a.due||'';
+  document.getElementById('fProgress').value = a.progress||0;
+  document.getElementById('fNotes').value    = a.notes||'';
+  document.getElementById('formTitle').textContent = t('editAssignment');
+  document.getElementById('cancelBtn').style.display = 'inline-block';
+  document.querySelector('.tab-btn[data-tab="tracker"]').click();
+  document.querySelector('#pane-tracker .form-section').scrollIntoView({behavior:'smooth'});
+}
+
+function deleteAssignment(id){
+  if (!confirm(t('confirmDelete'))) return;
+  allData = allData.filter(x=>x.id!==id);
+  renderAll();
+  showLoading();
+  google.script.run
+    .withSuccessHandler(() => hideLoading())
+    .withFailureHandler(err => { hideLoading(); alert('Delete error: '+err.message); reloadData(); })
+    .deleteTask(id);
+}
+
+function clearForm(){
+  ['editId','fTask','fStart','fDue','fNotes'].forEach(id=>{ document.getElementById(id).value=''; });
+  document.getElementById('fProgress').value=0;
+  const st = cfg.statuses||[]; if(st[0]) document.getElementById('fStatus').value=st[0].name;
+  document.getElementById('fImportance').value='high';
+  document.getElementById('fUrgency').value='high';
+  document.getElementById('formTitle').textContent=t('newAssignment');
+  document.getElementById('cancelBtn').style.display='none';
+  document.getElementById('formError').textContent='';
+}
+
+/* ---------- tracker render ---------- */
+function filteredData(){
+  const fp = document.getElementById('filtProject').value;
+  const fo = document.getElementById('filtOwner').value;
+  const fs = document.getElementById('filtStatus').value;
+  const fq = document.getElementById('filtSearch').value.toLowerCase();
+  return allData.filter(a=>
+    (!fp||a.project===fp) && (!fo||a.owner===fo) && (!fs||a.status===fs) &&
+    (!fq||((a.task||'').toLowerCase().includes(fq)||(a.notes||'').toLowerCase().includes(fq)))
+  );
+}
+
+function renderTracker(){
+  refreshSelects();
+  const all  = allData;
+  const done = all.filter(isDone).length;
+  const over = all.filter(isOverdue).length;
+  const today= all.filter(a=>a.due===todayStr()&&!isDone(a)).length;
+  const inprog=all.filter(a=>!isDone(a)&&statusPct(a.status)>0).length;
+  document.getElementById('sumTotal').textContent  = all.length;
+  document.getElementById('sumInprog').textContent = inprog;
+  document.getElementById('sumDone').textContent   = done;
+  document.getElementById('sumToday').textContent  = today;
+  document.getElementById('sumOver').textContent   = over;
+  renderStatusDonut(all);
+  renderGroupBars('projectBars', all, 'project');
+  renderGroupBars('ownerBars', all, 'owner');
+  renderTable();
+}
+
+function renderStatusDonut(all){
+  const counts = {}; (cfg.statuses||[]).forEach(s=>counts[s.name]=0);
+  all.forEach(a=>{ counts[a.status]=(counts[a.status]||0)+1; });
+  const total = all.length||1; let acc=0; const stops=[]; const leg=[];
+  (cfg.statuses||[]).forEach(s=>{
+    const c=counts[s.name]||0;
+    if(c){ const st=acc/total*360; acc+=c; const en=acc/total*360; stops.push(`${s.color} ${st}deg ${en}deg`); }
+    leg.push({s,c});
+  });
+  document.getElementById('statusDonut').style.background = stops.length?`conic-gradient(${stops.join(',')})` : '#e6e9ed';
+  const avg = all.length?Math.round(all.reduce((s,a)=>s+statusPct(a.status),0)/all.length):0;
+  document.getElementById('donutPct').textContent = avg+'%';
+  document.getElementById('statusLegend').innerHTML = leg.map(l=>
+    `<div><i style="background:${l.s.color}"></i>${esc(l.s.name)}<b style="margin-left:auto">${l.c}</b></div>`
+  ).join('')||'<div class="empty">—</div>';
+}
+
+function renderGroupBars(elId, all, field){
+  const counts={}; all.forEach(a=>{ const k=a[field]||t('unassigned'); counts[k]=(counts[k]||0)+1; });
+  const entries=Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+  const max=entries.length?Math.max(...entries.map(e=>e[1])):1;
+  document.getElementById(elId).innerHTML = entries.length?entries.map((e,i)=>
+    `<div class="bar-row"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(e[0])}">${esc(e[0])}</span>
+     <div class="bar-track"><div class="bar-fill" style="width:${e[1]/max*100}%;background:${PALETTE[i%PALETTE.length]}"></div></div>
+     <b style="text-align:right">${e[1]}</b></div>`
+  ).join('') : '<div class="empty">—</div>';
+}
+
+function renderTable(){
+  const cols = [['thTask','task'],['thProject','project'],['thCategory','category'],['thOwner','owner'],['thStatus','status'],['thProgress','progress'],['thDue','due'],['thActions','']];
+  document.getElementById('tableHead').innerHTML = cols.map(c=>`<th>${t(c[0])}</th>`).join('');
+  const rows = filteredData().sort((a,b)=>(a.due||'9999').localeCompare(b.due||'9999'));
+  const body = document.getElementById('tableBody');
+  if(!rows.length){ body.innerHTML=`<tr><td colspan="8" class="empty">${t('noData')}</td></tr>`; return; }
+  body.innerHTML = rows.map(a=>{
+    const over=isOverdue(a);
+    const pct=a.progress!=null?Number(a.progress):statusPct(a.status);
+    return `<tr class="${isDone(a)?'is-done':''} ${over?'is-over':''}">
+      <td><b>${esc(a.task)}</b>${a.notes?`<div style="font-size:.88em;color:#7f8c8d">${esc(a.notes)}</div>`:''}</td>
+      <td>${esc(a.project||'—')}</td><td>${esc(a.category||'—')}</td>
+      <td>${esc(a.owner||t('unassigned'))}</td>
+      <td><span class="pill" style="background:${statusColor(a.status)}22;color:${statusColor(a.status)}">${esc(a.status||'—')}</span></td>
+      <td><div class="progress"><span style="width:${pct}%"></span><i>${pct}%</i></div></td>
+      <td class="c-due">${a.due?esc(a.due):'—'}${over?` <small>(${t('overdueWord')})</small>`:''}</td>
+      <td style="white-space:nowrap">
+        <button class="btn btn-edit" onclick="editAssignment('${a.id}')">${t('edit')}</button>
+        <button class="btn btn-danger" onclick="deleteAssignment('${a.id}')">${t('del')}</button>
+      </td></tr>`;
+  }).join('');
+}
+
+/* ---------- eisenhower ---------- */
+function renderEisen(){
+  const q={q1:[],q2:[],q3:[],q4:[]};
+  allData.forEach(a=>{
+    const imp=a.importance!=='low', urg=a.urgency!=='low';
+    if(imp&&urg)q.q1.push(a); else if(imp)q.q2.push(a); else if(urg)q.q3.push(a); else q.q4.push(a);
+  });
+  const colors=['#e74c3c','#27ae60','#f39c12','#95a5a6'];
+  const card=a=>{
+    const pct=a.progress!=null?Number(a.progress):statusPct(a.status);
+    return `<div class="mini-card"><div class="mc-title">${esc(a.task)}</div>
+    <div class="mc-meta">${esc(a.owner||t('unassigned'))}${a.due?' · '+esc(a.due):''}${a.project?' · '+esc(a.project):''}</div>
+    <div class="progress"><span style="width:${pct}%"></span><i>${pct}%</i></div></div>`;
+  };
+  ['quad1','quad2','quad3','quad4'].forEach((id,i)=>{
+    const list=q['q'+(i+1)];
+    const open=list.filter(a=>!isDone(a));
+    document.getElementById(id).innerHTML=list.length?list.map(card).join(''):'<div class="empty">—</div>';
+    const avg=list.length?Math.round(list.reduce((s,a)=>s+(a.progress!=null?Number(a.progress):statusPct(a.status)),0)/list.length):0;
+    document.getElementById(id+'Cnt').textContent=open.length;
+    document.getElementById(id+'Pct').textContent=avg+'%';
+    const donut=document.getElementById(id+'Donut');
+    donut.style.background=`conic-gradient(${colors[i]} ${avg*3.6}deg, #e6e9ed 0deg)`;
+  });
+}
+
+/* ---------- calendar ---------- */
+let calDate = new Date();
+function calMove(n){ calDate.setMonth(calDate.getMonth()+n); renderCalendar(); }
+function calToday(){ calDate=new Date(); renderCalendar(); }
+function renderCalendar(){
+  const yr=calDate.getFullYear(), mo=calDate.getMonth();
+  const mNames=lang==='th'?['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม']:['January','February','March','April','May','June','July','August','September','October','November','December'];
+  document.getElementById('calTitle').textContent=`${mNames[mo]} ${yr}`;
+  const dow=lang==='th'?['อา','จ','อ','พ','พฤ','ศ','ส']:['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const ownerF=document.getElementById('calOwnerFilter').value;
+  const byDate={};
+  allData.filter(a=>a.due&&(!ownerF||a.owner===ownerF)).forEach(a=>{ (byDate[a.due]=byDate[a.due]||[]).push(a); });
+  const first=new Date(yr,mo,1).getDay(), days=new Date(yr,mo+1,0).getDate();
+  const today=todayStr();
+  let html=dow.map(d=>`<div class="cal-dow">${d}</div>`).join('');
+  for(let i=0;i<first;i++) html+=`<div class="cal-cell other"></div>`;
+  for(let d=1;d<=days;d++){
+    const ds=`${yr}-${String(mo+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const evs=byDate[ds]||[];
+    const evHtml=evs.map(a=>`<div class="cal-ev ${isDone(a)?'ev-done':isOverdue(a)?'ev-over':''}" title="${esc(a.task)}">${esc(a.task)}</div>`).join('');
+    html+=`<div class="cal-cell ${ds===today?'today':''}"><div class="cal-daynum">${d}</div>${evHtml}</div>`;
+  }
+  document.getElementById('calGrid').innerHTML=html;
+}
+
+/* ---------- kanban ---------- */
+function renderKanban(){
+  const pf=document.getElementById('kanProjectFilter').value;
+  const of=document.getElementById('kanOwnerFilter').value;
+  const data=allData.filter(a=>(!pf||a.project===pf)&&(!of||a.owner===of));
+  document.getElementById('kanbanBoard').innerHTML=(cfg.statuses||[]).map(s=>{
+    const cards=data.filter(a=>a.status===s.name);
+    const html=cards.length?cards.map(a=>{
+      const prio=a.importance!=='low'?(a.urgency!=='low'?'high':'medium'):'low';
+      return `<div class="kanban-card prio-${prio}">
+        <div class="kc-title">${esc(a.task)}</div>
+        <div class="kc-meta">${esc(a.owner||t('unassigned'))}${a.due?` · 📅 ${esc(a.due)}`:''}</div></div>`;
+    }).join(''):'<div class="empty">—</div>';
+    return `<div class="kanban-col">
+      <div class="kanban-col-header" style="border-color:${s.color};color:${s.color}">${esc(s.name)} <span class="badge-count" style="background:${s.color}">${cards.length}</span></div>${html}</div>`;
+  }).join('');
+}
+
+/* ---------- team KPI ---------- */
+function saveWeights(){
+  const c=Math.max(0,parseInt(document.getElementById('wCompletion').value)||0);
+  const o=Math.max(0,parseInt(document.getElementById('wOnTime').value)||0);
+  const p=Math.max(0,parseInt(document.getElementById('wProgress').value)||0);
+  cfg.kpiWeights={completion:c,onTime:o,progress:p};
+  saveWeights._pending=true; renderKPI();
+}
+function clearKpiRange(){ document.getElementById('kpiFrom').value=''; document.getElementById('kpiTo').value=''; renderKPI(); }
+function renderKPI(){
+  const w=cfg.kpiWeights||{completion:30,onTime:20,progress:50};
+  document.getElementById('wCompletion').value=w.completion;
+  document.getElementById('wOnTime').value=w.onTime;
+  document.getElementById('wProgress').value=w.progress;
+  const wSum=w.completion+w.onTime+w.progress;
+  const wEl=document.getElementById('wTotalVal'); wEl.textContent=wSum+'%'; wEl.className=wSum===100?'ok':'bad';
+  const denom=wSum||1;
+  document.getElementById('kpiHead').innerHTML=['kpiOwner','kpiTotal','kpiInprog','kpiDone','kpiOver','kpiRate','kpiScore'].map(k=>`<th>${t(k)}</th>`).join('');
+  const from=document.getElementById('kpiFrom').value, to=document.getElementById('kpiTo').value;
+  const data=allData.filter(a=>(!from||!a.due||a.due>=from)&&(!to||!a.due||a.due<=to));
+  const owners=[...new Set([...(cfg.owners||[]),...data.map(a=>a.owner||t('unassigned'))])];
+  const rows=owners.map(o=>{
+    const mine=data.filter(a=>(a.owner||t('unassigned'))===o);
+    if(!mine.length&&!(cfg.owners||[]).includes(o)) return null;
+    const done=mine.filter(isDone).length, over=mine.filter(isOverdue).length;
+    const inprog=mine.filter(a=>!isDone(a)&&statusPct(a.status)>0).length;
+    const rate=mine.length?Math.round(done/mine.length*100):0;
+    const onTimeRate=mine.length?Math.round((mine.length-over)/mine.length*100):0;
+    const avgProg=mine.length?Math.round(mine.reduce((s,a)=>s+(a.progress!=null?Number(a.progress):statusPct(a.status)),0)/mine.length):0;
+    const score=Math.round((rate*w.completion+onTimeRate*w.onTime+avgProg*w.progress)/denom);
+    return {o,total:mine.length,inprog,done,over,rate,score};
+  }).filter(Boolean).sort((a,b)=>b.score-a.score||b.total-a.total);
+  const body=document.getElementById('kpiBody');
+  body.innerHTML=rows.length?rows.map(r=>`<tr>
+    <td><b>${esc(r.o)}</b></td><td>${r.total}</td><td>${r.inprog}</td><td>${r.done}</td>
+    <td>${r.over?`<span style="color:#e74c3c;font-weight:700">${r.over}</span>`:'0'}</td>
+    <td><div class="progress" style="width:100px"><span style="width:${r.rate}%"></span><i>${r.rate}%</i></div></td>
+    <td class="score-cell">${r.score}</td></tr>`).join(''):`<tr><td colspan="7" class="empty">${t('noData')}</td></tr>`;
+  const overallProg=data.length?Math.round(data.reduce((s,a)=>s+(a.progress!=null?Number(a.progress):statusPct(a.status)),0)/data.length):0;
+  document.getElementById('kpiSumOwners').textContent=rows.length;
+  document.getElementById('kpiSumTasks').textContent=data.length;
+  document.getElementById('kpiSumOverP').textContent=rows.filter(r=>r.over>0).length;
+  document.getElementById('kpiSumProg').textContent=overallProg+'%';
+}
+
+/* ---------- setup ---------- */
+function renderSetup(){
+  const mk=(arr,listId,removeFn)=>{
+    const el=document.getElementById(listId);
+    el.innerHTML=arr.length?'':'<div class="empty">—</div>';
+    arr.forEach((v,i)=>{
+      const row=document.createElement('div'); row.className='chip';
+      row.innerHTML=`<span class="grow">${esc(v)}</span><button class="btn btn-danger btn-sm">✕</button>`;
+      row.querySelector('button').onclick=()=>removeFn(i);
+      el.appendChild(row);
+    });
+  };
+  mk(cfg.projects||[],'listProjects',i=>{cfg.projects.splice(i,1);renderAll();});
+  mk(cfg.categories||[],'listCategories',i=>{cfg.categories.splice(i,1);renderAll();});
+  mk(cfg.owners||[],'listOwners',i=>{cfg.owners.splice(i,1);renderAll();});
+  const sl=document.getElementById('listStatuses'); sl.innerHTML='';
+  (cfg.statuses||[]).forEach((s,i)=>{
+    const row=document.createElement('div'); row.className='chip';
+    row.innerHTML=`<span class="swatch" style="background:${s.color}"></span><span class="grow">${esc(s.name)}</span>
+      <input class="inline" type="number" min="0" max="100" value="${s.pct}" style="width:52px" title="%">
+      <input class="inline" type="color" value="${s.color}" style="width:32px;padding:0;height:24px">
+      <button class="btn btn-danger btn-sm">✕</button>`;
+    const [pIn,cIn]=row.querySelectorAll('input');
+    pIn.onchange=()=>{s.pct=Math.max(0,Math.min(100,parseInt(pIn.value)||0));renderAll();};
+    cIn.onchange=()=>{s.color=cIn.value;row.querySelector('.swatch').style.background=cIn.value;renderAll();};
+    row.querySelector('button.btn-danger').onclick=()=>{cfg.statuses.splice(i,1);renderAll();};
+    sl.appendChild(row);
+  });
+}
+function addProject(){ const v=document.getElementById('newProject').value.trim(); if(v){cfg.projects.push(v);document.getElementById('newProject').value='';renderAll();} }
+function addCategory(){ const v=document.getElementById('newCategory').value.trim(); if(v){cfg.categories.push(v);document.getElementById('newCategory').value='';renderAll();} }
+function addOwner(){ const v=document.getElementById('newOwner').value.trim(); if(v){cfg.owners.push(v);document.getElementById('newOwner').value='';renderAll();} }
+function addStatus(){ const v=document.getElementById('newStatusName').value.trim(); if(v){cfg.statuses.push({name:v,pct:parseInt(document.getElementById('newStatusPct').value)||0,color:'#7f8c8d'});document.getElementById('newStatusName').value='';renderAll();} }
+
+function pushConfig(){
+  showLoading();
+  google.script.run
+    .withSuccessHandler(()=>{hideLoading();alert('Config บันทึกแล้ว!');})
+    .withFailureHandler(err=>{hideLoading();alert('Error: '+err.message);})
+    .saveConfig(cfg);
+}
+
+/* ---------- export ---------- */
+function exportCSV(){
+  const cols=['id','task','project','category','owner','status','progress','importance','urgency','start','due','notes'];
+  const head=cols.join(',');
+  const lines=allData.map(a=>cols.map(c=>{const v=a[c]==null?'':String(a[c]).replace(/"/g,'""'); return /[",\n]/.test(v)?`"${v}"`:v;}).join(','));
+  const blob=new Blob([head+'\n'+lines.join('\n')],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const el=document.createElement('a');el.href=url;el.download='assignments.csv';el.click();URL.revokeObjectURL(url);
+}
+
+/* ---------- master render ---------- */
+function renderAll(){
+  refreshSelects();
+  renderSetup();
+  renderTracker();
+  renderEisen();
+  renderCalendar();
+  renderKanban();
+  renderKPI();
+}
+
+/* ---------- init ---------- */
+setLang('th');
+reloadData();
+</script>
+</body>
+</html>
