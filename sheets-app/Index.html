@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>kinn Assignment Tracker</title>
+<title>Assignment Tracker</title>
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&family=Roboto+Slab:wght@400;700&display=swap" rel="stylesheet">
 <style>
 * { box-sizing: border-box; }
@@ -167,6 +167,14 @@ table.data tr.is-over td.c-due { color: #e74c3c; font-weight: 700; }
 .add-inline { display: flex; gap: 6px; margin-top: 5px; }
 .add-inline input { flex: 1; padding: 6px 8px; border: 1px solid #ccc; border-radius: 5px; font-family: inherit; font-size: .84em; }
 
+/* ---- Transaction status ---- */
+.tx-income  { background: #d5f5e3; color: #1d6a3a; }
+.tx-expense { background: #fadbd8; color: #922b21; }
+.tx-paid    { background: #d5f5e3; color: #1d6a3a; }
+.tx-pending { background: #fef5e7; color: #b9770e; }
+.tx-cancelled { background: #f4f6f7; color: #7f8c8d; text-decoration: line-through; }
+.tx-total-row td { font-weight: 700; background: #f8f9fa; border-top: 2px solid #ddd; }
+
 /* ---- Misc ---- */
 .hint { background: #fff8e1; border-left: 4px solid #f1c40f; border-radius: 5px; padding: 10px 13px; font-size: .84em; color: #6b5900; margin-bottom: 14px; }
 .empty { text-align: center; color: #bdc3c7; font-size: .84em; padding: 16px 0; }
@@ -186,7 +194,7 @@ table.data tr.is-over td.c-due { color: #e74c3c; font-weight: 700; }
 <div class="app-header">
   <div>
     <h1 data-i18n="appTitle">Assignment Tracker</h1>
-    <div class="sub" data-i18n="appSubtitle">Powered by Google Sheets</div>
+    <div class="sub" data-i18n="appSubtitle">ขับเคลื่อนโดย Google Sheets</div>
   </div>
   <div class="lang-toggle">
     <button id="langTH" onclick="setLang('th')">ไทย</button>
@@ -203,6 +211,7 @@ table.data tr.is-over td.c-due { color: #e74c3c; font-weight: 700; }
     <button class="tab-btn" data-tab="calendar"     data-i18n="tabCalendar">📅 ปฏิทิน</button>
     <button class="tab-btn" data-tab="kanban"       data-i18n="tabKanban">📊 Kanban</button>
     <button class="tab-btn" data-tab="kpi"          data-i18n="tabKpi">👥 Team KPI</button>
+    <button class="tab-btn" data-tab="transactions" data-i18n="tabTx">💰 Transactions</button>
   </div>
 
   <!-- INSTRUCTIONS -->
@@ -371,6 +380,95 @@ table.data tr.is-over td.c-due { color: #e74c3c; font-weight: 700; }
   </div>
 </div>
 
+  <!-- TRANSACTIONS -->
+  <div class="tab-pane" id="pane-transactions">
+    <div class="summary-grid">
+      <div class="card done"><div class="label" data-i18n="txIncome">รายรับ</div><div class="value" id="txSumIncome">฿0</div></div>
+      <div class="card over"><div class="label" data-i18n="txExpense">รายจ่าย</div><div class="value" id="txSumExpense">฿0</div></div>
+      <div class="card inprog"><div class="label" data-i18n="txBalance">คงเหลือ</div><div class="value" id="txSumBalance">฿0</div></div>
+      <div class="card today"><div class="label" data-i18n="txPending">รอชำระ</div><div class="value" id="txSumPending">฿0</div></div>
+    </div>
+
+    <div class="charts-grid">
+      <div class="chart-box"><h3 data-i18n="txChartProject">รายรับ-จ่ายตามโครงการ</h3><div id="txProjectBars"></div></div>
+      <div class="chart-box"><h3 data-i18n="txChartType">สัดส่วนรายรับ-จ่าย</h3>
+        <div class="donut-wrap">
+          <div class="donut" id="txDonut"><div class="donut-center"><b id="txDonutLabel">—</b><small data-i18n="txDonutSub">รายรับ</small></div></div>
+          <div class="legend" id="txLegend"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-header" data-i18n="txAddNew">เพิ่ม Transaction</div>
+    <div class="form-section">
+      <h2 id="txFormTitle" data-i18n="txNewTitle">รายการใหม่</h2>
+      <input type="hidden" id="txEditId">
+      <div class="form-grid">
+        <div class="form-group span2"><label data-i18n="txDesc">รายละเอียด *</label><input type="text" id="txDesc" placeholder="รายละเอียด transaction..."></div>
+        <div class="form-group"><label data-i18n="txDate">วันที่</label><input type="date" id="txDate"></div>
+        <div class="form-group"><label data-i18n="txProject">โครงการ</label><select id="txProject"></select></div>
+        <div class="form-group"><label data-i18n="txClient">ลูกค้า / คู่ค้า</label><input type="text" id="txClient" placeholder="ชื่อลูกค้า..."></div>
+        <div class="form-group">
+          <label data-i18n="txType">ประเภท</label>
+          <select id="txType">
+            <option value="income">💰 รายรับ (Income)</option>
+            <option value="expense">💸 รายจ่าย (Expense)</option>
+          </select>
+        </div>
+        <div class="form-group"><label data-i18n="txAmount">จำนวน</label><input type="number" id="txAmount" min="0" step="0.01" placeholder="0.00"></div>
+        <div class="form-group">
+          <label data-i18n="txCurrency">สกุลเงิน</label>
+          <select id="txCurrency">
+            <option value="THB">THB ฿</option>
+            <option value="USD">USD $</option>
+            <option value="SGD">SGD S$</option>
+            <option value="EUR">EUR €</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label data-i18n="txStatus">สถานะ</label>
+          <select id="txStatus">
+            <option value="pending">⏳ รอชำระ</option>
+            <option value="paid">✅ ชำระแล้ว</option>
+            <option value="cancelled">❌ ยกเลิก</option>
+          </select>
+        </div>
+        <div class="form-group span2"><label data-i18n="txNotes">หมายเหตุ</label><textarea id="txNotes" placeholder="หมายเหตุเพิ่มเติม..."></textarea></div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-primary" onclick="saveTx()" data-i18n="save">บันทึก</button>
+        <button class="btn btn-cancel" id="txCancelBtn" onclick="clearTxForm()" style="display:none" data-i18n="cancel">ยกเลิก</button>
+        <span id="txFormError" style="color:#e74c3c;font-size:.84em"></span>
+      </div>
+    </div>
+
+    <div class="section-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <span data-i18n="txAll">รายการทั้งหมด</span>
+      <div class="filter-bar" style="margin:0">
+        <select id="txFiltProject" onchange="renderTx()"></select>
+        <select id="txFiltType" onchange="renderTx()">
+          <option value="">ทุกประเภท</option>
+          <option value="income">รายรับ</option>
+          <option value="expense">รายจ่าย</option>
+        </select>
+        <select id="txFiltStatus" onchange="renderTx()">
+          <option value="">ทุกสถานะ</option>
+          <option value="pending">รอชำระ</option>
+          <option value="paid">ชำระแล้ว</option>
+          <option value="cancelled">ยกเลิก</option>
+        </select>
+        <input type="text" id="txFiltSearch" placeholder="ค้นหา..." oninput="renderTx()">
+      </div>
+    </div>
+    <div class="toolbar">
+      <button class="btn btn-ghost btn-sm" onclick="exportTxCSV()">Export CSV</button>
+    </div>
+    <div class="table-wrap">
+      <table class="data"><thead><tr id="txTableHead"></tr></thead><tbody id="txTableBody"></tbody></table>
+    </div>
+  </div>
+</div>
+
 <!-- loading overlay -->
 <div class="overlay" id="loadingOverlay"><div class="spinner"></div></div>
 
@@ -381,6 +479,7 @@ table.data tr.is-over td.c-due { color: #e74c3c; font-weight: 700; }
 const PALETTE = ['#2980b9','#27ae60','#f39c12','#8e44ad','#e74c3c','#16a085','#d35400','#2c3e50'];
 
 let allData   = [];   // tasks from Sheet
+let allTx     = [];   // transactions from Sheet
 let cfg       = {};   // config from Sheet
 let lang      = 'th';
 
@@ -405,6 +504,17 @@ const I18N = {
     eisenHint:'งานแบ่งออกเป็น 4 กลุ่มตามความสำคัญและความเร่งด่วน',
     q1Title:'ทำทันที', q1Sub:'สำคัญ & ด่วน', q2Title:'วางแผน', q2Sub:'สำคัญ & ไม่ด่วน',
     q3Title:'มอบหมาย', q3Sub:'ไม่สำคัญ & ด่วน', q4Title:'ตัดทิ้ง', q4Sub:'ไม่สำคัญ & ไม่ด่วน',
+    tabTx:'💰 Transactions',
+    txIncome:'รายรับ', txExpense:'รายจ่าย', txBalance:'คงเหลือ', txPending:'รอชำระ',
+    txChartProject:'รายรับ-จ่ายตามโครงการ', txChartType:'สัดส่วนรายรับ-จ่าย', txDonutSub:'รายรับ',
+    txAddNew:'เพิ่ม Transaction', txNewTitle:'รายการใหม่', txEditTitle:'แก้ไขรายการ',
+    txDesc:'รายละเอียด *', txDate:'วันที่', txProject:'โครงการ', txClient:'ลูกค้า / คู่ค้า',
+    txType:'ประเภท', txAmount:'จำนวน', txCurrency:'สกุลเงิน', txStatus:'สถานะ', txNotes:'หมายเหตุ',
+    txAll:'รายการทั้งหมด',
+    txThDate:'วันที่', txThDesc:'รายละเอียด', txThProject:'โครงการ', txThClient:'ลูกค้า',
+    txThType:'ประเภท', txThAmount:'จำนวน', txThStatus:'สถานะ', txThActions:'จัดการ',
+    txTypeIncome:'💰 รายรับ', txTypeExpense:'💸 รายจ่าย',
+    txStatPaid:'✅ ชำระแล้ว', txStatPending:'⏳ รอชำระ', txStatCancelled:'❌ ยกเลิก',
     kpiHint:'ผลการทำงานรายคน — ตั้งน้ำหนักเกณฑ์ได้เอง รวม 100%',
     kpiOwner:'ผู้รับผิดชอบ', kpiTotal:'ทั้งหมด', kpiInprog:'กำลังทำ', kpiDone:'เสร็จ', kpiOver:'เลยกำหนด', kpiRate:'อัตราเสร็จ', kpiScore:'คะแนน KPI',
     noData:'ยังไม่มีข้อมูล', confirmDelete:'ลบงานนี้?', unassigned:'ยังไม่กำหนด', overdueWord:'เลยกำหนด',
@@ -439,6 +549,17 @@ const I18N = {
     eisenHint:'Tasks split into 4 quadrants by importance × urgency.',
     q1Title:'Do first', q1Sub:'Important & Urgent', q2Title:'Schedule', q2Sub:'Important & Not urgent',
     q3Title:'Delegate', q3Sub:'Not important & Urgent', q4Title:'Eliminate', q4Sub:'Not important & Not urgent',
+    tabTx:'💰 Transactions',
+    txIncome:'Income', txExpense:'Expense', txBalance:'Balance', txPending:'Pending',
+    txChartProject:'Income/Expense by project', txChartType:'Income vs Expense', txDonutSub:'Income',
+    txAddNew:'Add Transaction', txNewTitle:'New transaction', txEditTitle:'Edit transaction',
+    txDesc:'Description *', txDate:'Date', txProject:'Project', txClient:'Client / Partner',
+    txType:'Type', txAmount:'Amount', txCurrency:'Currency', txStatus:'Status', txNotes:'Notes',
+    txAll:'All transactions',
+    txThDate:'Date', txThDesc:'Description', txThProject:'Project', txThClient:'Client',
+    txThType:'Type', txThAmount:'Amount', txThStatus:'Status', txThActions:'Actions',
+    txTypeIncome:'💰 Income', txTypeExpense:'💸 Expense',
+    txStatPaid:'✅ Paid', txStatPending:'⏳ Pending', txStatCancelled:'❌ Cancelled',
     kpiHint:'Per-person performance. Weights configurable, total = 100%.',
     kpiOwner:'Owner', kpiTotal:'Total', kpiInprog:'In progress', kpiDone:'Done', kpiOver:'Overdue', kpiRate:'Completion', kpiScore:'KPI score',
     noData:'No data yet.', confirmDelete:'Delete this task?', unassigned:'Unassigned', overdueWord:'overdue',
@@ -493,10 +614,16 @@ document.getElementById('tabBar').addEventListener('click', e => {
 /* ---------- load from Apps Script ---------- */
 function reloadData(){
   showLoading();
+  let sheetDone = false, txDone = false;
+  function checkDone(){ if(sheetDone && txDone){ hideLoading(); renderAll(); } }
   google.script.run
-    .withSuccessHandler(res => { allData = res.tasks; cfg = res.config; hideLoading(); renderAll(); })
+    .withSuccessHandler(res => { allData = res.tasks; cfg = res.config; sheetDone = true; checkDone(); })
     .withFailureHandler(err => { hideLoading(); alert('Error loading data: ' + err.message); })
     .getSheetData();
+  google.script.run
+    .withSuccessHandler(txs => { allTx = txs; txDone = true; checkDone(); })
+    .withFailureHandler(err => { txDone = true; checkDone(); })
+    .getTransactions();
 }
 
 /* ---------- selects ---------- */
@@ -857,6 +984,185 @@ function exportCSV(){
   const el=document.createElement('a');el.href=url;el.download='assignments.csv';el.click();URL.revokeObjectURL(url);
 }
 
+/* ---------- transactions ---------- */
+function fmtMoney(n, cur){ return (cur||'THB')+' '+Number(n||0).toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function txStatusLabel(s){ return s==='paid'?t('txStatPaid'):s==='cancelled'?t('txStatCancelled'):t('txStatPending'); }
+function txStatusClass(s){ return s==='paid'?'tx-paid':s==='cancelled'?'tx-cancelled':'tx-pending'; }
+
+function filteredTx(){
+  const fp = document.getElementById('txFiltProject').value;
+  const ft = document.getElementById('txFiltType').value;
+  const fs = document.getElementById('txFiltStatus').value;
+  const fq = document.getElementById('txFiltSearch').value.toLowerCase();
+  return allTx.filter(x=>
+    (!fp||x.project===fp) && (!ft||x.type===ft) && (!fs||x.status===fs) &&
+    (!fq||(x.description||'').toLowerCase().includes(fq)||(x.client||'').toLowerCase().includes(fq))
+  );
+}
+
+function renderTx(){
+  fillSelect('txProject', cfg.projects||[], {blank:'—'});
+  fillSelect('txFiltProject', cfg.projects||[], {all:'ทุกโครงการ'});
+
+  const rows = filteredTx().sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+
+  // summary (use all, not filtered)
+  let income=0, expense=0, pending=0;
+  allTx.forEach(x=>{
+    const amt = Number(x.amount)||0;
+    if (x.status==='cancelled') return;
+    if (x.type==='income') { income+=amt; if(x.status==='pending') pending+=amt; }
+    else { expense+=amt; }
+  });
+  const cur = 'THB';
+  document.getElementById('txSumIncome').textContent  = fmtMoney(income, cur);
+  document.getElementById('txSumExpense').textContent = fmtMoney(expense, cur);
+  document.getElementById('txSumBalance').textContent = fmtMoney(income-expense, cur);
+  document.getElementById('txSumPending').textContent = fmtMoney(pending, cur);
+
+  // donut income vs expense
+  const total = income + expense || 1;
+  const incPct = income/total*360;
+  document.getElementById('txDonut').style.background = `conic-gradient(#27ae60 ${incPct}deg, #e74c3c 0deg)`;
+  document.getElementById('txDonutLabel').textContent = Math.round(income/total*100)+'%';
+  document.getElementById('txLegend').innerHTML =
+    `<div><i style="background:#27ae60"></i>${t('txIncome')}: ${fmtMoney(income,cur)}</div>
+     <div><i style="background:#e74c3c"></i>${t('txExpense')}: ${fmtMoney(expense,cur)}</div>`;
+
+  // project bars
+  const pMap={};
+  allTx.filter(x=>x.status!=='cancelled').forEach(x=>{
+    const k=x.project||'(ไม่ระบุ)';
+    if(!pMap[k]) pMap[k]={in:0,out:0};
+    if(x.type==='income') pMap[k].in+=Number(x.amount)||0;
+    else pMap[k].out+=Number(x.amount)||0;
+  });
+  const pEntries=Object.entries(pMap).sort((a,b)=>(b[1].in+b[1].out)-(a[1].in+a[1].out));
+  const pMax=pEntries.length?Math.max(...pEntries.map(e=>Math.max(e[1].in,e[1].out))):1;
+  document.getElementById('txProjectBars').innerHTML = pEntries.length?pEntries.map(([k,v])=>
+    `<div style="margin-bottom:10px">
+      <div style="font-size:.8em;font-weight:600;margin-bottom:3px">${esc(k)}</div>
+      <div class="bar-row" style="grid-template-columns:60px 1fr 80px">
+        <span style="font-size:.75em;color:#27ae60">รายรับ</span>
+        <div class="bar-track"><div class="bar-fill" style="width:${v.in/pMax*100}%;background:#27ae60"></div></div>
+        <small style="text-align:right">${fmtMoney(v.in,cur)}</small>
+      </div>
+      <div class="bar-row" style="grid-template-columns:60px 1fr 80px">
+        <span style="font-size:.75em;color:#e74c3c">รายจ่าย</span>
+        <div class="bar-track"><div class="bar-fill" style="width:${v.out/pMax*100}%;background:#e74c3c"></div></div>
+        <small style="text-align:right">${fmtMoney(v.out,cur)}</small>
+      </div>
+    </div>`
+  ).join('') : '<div class="empty">—</div>';
+
+  // table
+  const cols = ['txThDate','txThDesc','txThProject','txThClient','txThType','txThAmount','txThStatus','txThActions'];
+  document.getElementById('txTableHead').innerHTML = cols.map(k=>`<th>${t(k)}</th>`).join('');
+  const body = document.getElementById('txTableBody');
+  if(!rows.length){ body.innerHTML=`<tr><td colspan="8" class="empty">${t('noData')}</td></tr>`; return; }
+  let totalInc=0, totalExp=0;
+  body.innerHTML = rows.map(x=>{
+    const amt=Number(x.amount)||0;
+    if(x.status!=='cancelled'){ x.type==='income'?totalInc+=amt:totalExp+=amt; }
+    const typeLabel=x.type==='income'?t('txTypeIncome'):t('txTypeExpense');
+    const typeClass=x.type==='income'?'tx-income':'tx-expense';
+    return `<tr class="${x.status==='cancelled'?'is-done':''}">
+      <td>${x.date||'—'}</td>
+      <td><b>${esc(x.description||'—')}</b>${x.notes?`<div style="font-size:.85em;color:#7f8c8d">${esc(x.notes)}</div>`:''}</td>
+      <td>${esc(x.project||'—')}</td>
+      <td>${esc(x.client||'—')}</td>
+      <td><span class="pill ${typeClass}">${typeLabel}</span></td>
+      <td style="text-align:right;font-weight:600">${fmtMoney(amt, x.currency||'THB')}</td>
+      <td><span class="pill ${txStatusClass(x.status)}">${txStatusLabel(x.status)}</span></td>
+      <td style="white-space:nowrap">
+        <button class="btn btn-edit" onclick="editTx('${x.id}')">${t('edit')}</button>
+        <button class="btn btn-danger" onclick="deleteTx('${x.id}')">${t('del')}</button>
+      </td></tr>`;
+  }).join('');
+  body.innerHTML += `<tr class="tx-total-row">
+    <td colspan="4"></td>
+    <td>${t('txIncome')}</td><td style="text-align:right">${fmtMoney(totalInc,cur)}</td><td colspan="2"></td></tr>
+  <tr class="tx-total-row">
+    <td colspan="4"></td>
+    <td>${t('txExpense')}</td><td style="text-align:right">${fmtMoney(totalExp,cur)}</td><td colspan="2"></td></tr>`;
+}
+
+function clearTxForm(){
+  ['txEditId','txDesc','txClient','txNotes'].forEach(id=>{document.getElementById(id).value='';});
+  document.getElementById('txDate').value = new Date().toISOString().slice(0,10);
+  document.getElementById('txAmount').value='';
+  document.getElementById('txType').value='income';
+  document.getElementById('txStatus').value='pending';
+  document.getElementById('txCurrency').value='THB';
+  document.getElementById('txFormTitle').textContent=t('txNewTitle');
+  document.getElementById('txCancelBtn').style.display='none';
+  document.getElementById('txFormError').textContent='';
+}
+
+function saveTx(){
+  const id   = document.getElementById('txEditId').value;
+  const desc = document.getElementById('txDesc').value.trim();
+  if(!desc){ document.getElementById('txFormError').textContent='กรุณากรอกรายละเอียด'; return; }
+  document.getElementById('txFormError').textContent='';
+  const tx = {
+    id:          id || String(Date.now()),
+    date:        document.getElementById('txDate').value,
+    description: desc,
+    project:     document.getElementById('txProject').value,
+    client:      document.getElementById('txClient').value.trim(),
+    type:        document.getElementById('txType').value,
+    amount:      parseFloat(document.getElementById('txAmount').value)||0,
+    currency:    document.getElementById('txCurrency').value,
+    status:      document.getElementById('txStatus').value,
+    notes:       document.getElementById('txNotes').value.trim()
+  };
+  const idx = allTx.findIndex(x=>x.id===tx.id);
+  if(idx>=0) allTx[idx]=tx; else allTx.push(tx);
+  clearTxForm(); renderTx();
+  showLoading();
+  google.script.run
+    .withSuccessHandler(()=>hideLoading())
+    .withFailureHandler(err=>{hideLoading();alert('Error: '+err.message);})
+    .saveTransaction(tx);
+}
+
+function editTx(id){
+  const x=allTx.find(t=>t.id===id); if(!x) return;
+  document.getElementById('txEditId').value   = x.id;
+  document.getElementById('txDesc').value     = x.description||'';
+  document.getElementById('txDate').value     = x.date||'';
+  document.getElementById('txProject').value  = x.project||'';
+  document.getElementById('txClient').value   = x.client||'';
+  document.getElementById('txType').value     = x.type||'income';
+  document.getElementById('txAmount').value   = x.amount||0;
+  document.getElementById('txCurrency').value = x.currency||'THB';
+  document.getElementById('txStatus').value   = x.status||'pending';
+  document.getElementById('txNotes').value    = x.notes||'';
+  document.getElementById('txFormTitle').textContent=t('txEditTitle');
+  document.getElementById('txCancelBtn').style.display='inline-block';
+  document.querySelector('.tab-btn[data-tab="transactions"]').click();
+  document.querySelector('#pane-transactions .form-section').scrollIntoView({behavior:'smooth'});
+}
+
+function deleteTx(id){
+  if(!confirm(t('confirmDelete'))) return;
+  allTx=allTx.filter(x=>x.id!==id); renderTx();
+  showLoading();
+  google.script.run
+    .withSuccessHandler(()=>hideLoading())
+    .withFailureHandler(err=>{hideLoading();alert('Error: '+err.message);})
+    .deleteTransaction(id);
+}
+
+function exportTxCSV(){
+  const cols=['id','date','description','project','client','type','amount','currency','status','notes'];
+  const head=cols.join(',');
+  const lines=allTx.map(x=>cols.map(c=>{const v=x[c]==null?'':String(x[c]).replace(/"/g,'""'); return /[",\n]/.test(v)?`"${v}"`:v;}).join(','));
+  const blob=new Blob([head+'\n'+lines.join('\n')],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download='transactions.csv';a.click();URL.revokeObjectURL(url);
+}
+
 /* ---------- master render ---------- */
 function renderAll(){
   refreshSelects();
@@ -866,6 +1172,7 @@ function renderAll(){
   renderCalendar();
   renderKanban();
   renderKPI();
+  renderTx();
 }
 
 /* ---------- init ---------- */
