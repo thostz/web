@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PM Console — AI Multi-Agent Terminal</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg:       #0d1117;
+            --surface:  #161b22;
+            --surface2: #21262d;
+            --border:   #30363d;
+            --text:     #c9d1d9;
+            --muted:    #8b949e;
+            --green:    #3fb950;
+            --blue:     #58a6ff;
+            --yellow:   #e3b341;
+            --orange:   #f0883e;
+            --red:      #f85149;
+            --pink:     #f778ba;
+            --purple:   #d2a8ff;
+            --cyan:     #39c5cf;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 14px;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 12px;
+        }
+
+        /* ── Window chrome ── */
+        #terminal-window {
+            width: 100%;
+            max-width: 900px;
+            height: 96vh;
+            background: var(--surface);
+            border-radius: 10px;
+            box-shadow: 0 24px 64px rgba(0,0,0,0.8);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+
+        #title-bar {
+            background: var(--surface2);
+            padding: 10px 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+            user-select: none;
+        }
+        .dot { width: 12px; height: 12px; border-radius: 50%; cursor: default; }
+        .dot.r { background: #ff5f56; } .dot.y { background: #ffbd2e; } .dot.g { background: #27c93f; }
+        #title-text { flex: 1; text-align: center; color: var(--muted); font-size: 12px; letter-spacing: .5px; }
+
+        /* ── Agent status bar ── */
+        #agent-bar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 7px 16px;
+            border-bottom: 1px solid var(--border);
+            background: var(--surface2);
+            flex-shrink: 0;
+            overflow-x: auto;
+        }
+        #agent-bar::-webkit-scrollbar { height: 0; }
+        .agent-pill {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            border: 1px solid;
+            white-space: nowrap;
+            opacity: .45;
+            transition: opacity .3s, box-shadow .3s;
+        }
+        .agent-pill.active { opacity: 1; box-shadow: 0 0 8px currentColor; }
+        .agent-pill .dot-sm { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+
+        /* ── Output ── */
+        #output {
+            flex: 1;
+            overflow-y: auto;
+            padding: 18px 20px;
+            scroll-behavior: smooth;
+        }
+        #output::-webkit-scrollbar { width: 5px; }
+        #output::-webkit-scrollbar-track { background: transparent; }
+        #output::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+        .line { line-height: 1.65; white-space: pre-wrap; word-break: break-word; margin-bottom: 1px; }
+
+        /* Agent response block */
+        .agent-block {
+            border-left: 3px solid;
+            padding: 10px 14px;
+            margin: 8px 0;
+            border-radius: 0 6px 6px 0;
+            background: rgba(255,255,255,.025);
+        }
+        .agent-header {
+            font-size: 11px;
+            font-weight: bold;
+            letter-spacing: 1px;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .agent-body { color: var(--text); font-size: 13.5px; line-height: 1.7; white-space: pre-wrap; }
+
+        /* Routing notice */
+        .route-line {
+            color: var(--orange);
+            font-size: 12px;
+            padding: 3px 0 3px 4px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* Prompt echo */
+        .prompt-echo {
+            display: flex;
+            align-items: flex-start;
+            gap: 6px;
+            margin-top: 10px;
+        }
+        .prompt-label { color: var(--green); white-space: nowrap; }
+
+        /* Typing dots */
+        .typing-dots span {
+            animation: blink-dot 1.2s infinite;
+            animation-fill-mode: both;
+            color: var(--muted);
+        }
+        .typing-dots span:nth-child(2) { animation-delay: .2s; }
+        .typing-dots span:nth-child(3) { animation-delay: .4s; }
+        @keyframes blink-dot { 0%,80%,100% { opacity:0 } 40% { opacity:1 } }
+
+        /* Misc */
+        .color-green  { color: var(--green); }
+        .color-blue   { color: var(--blue); }
+        .color-yellow { color: var(--yellow); }
+        .color-orange { color: var(--orange); }
+        .color-pink   { color: var(--pink); }
+        .color-gray   { color: var(--muted); }
+        .color-red    { color: var(--red); }
+        .color-cyan   { color: var(--cyan); }
+        .color-purple { color: var(--purple); }
+
+        .ascii-art { color: var(--blue); font-size: 11px; line-height: 1.25; }
+
+        /* ── API key overlay ── */
+        #api-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(0,0,0,.85);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 99;
+            border-radius: 10px;
+        }
+        #api-box {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 28px 32px;
+            width: 420px;
+            max-width: 95%;
+        }
+        #api-box h3 { color: var(--blue); margin-bottom: 8px; font-size: 14px; letter-spacing: 1px; }
+        #api-box p  { color: var(--muted); font-size: 12px; margin-bottom: 16px; line-height: 1.6; }
+        #api-key-input {
+            width: 100%;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 5px;
+            color: var(--text);
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            padding: 9px 12px;
+            outline: none;
+            margin-bottom: 12px;
+        }
+        #api-key-input:focus { border-color: var(--blue); }
+        #api-submit {
+            width: 100%;
+            background: var(--blue);
+            color: #000;
+            border: none;
+            border-radius: 5px;
+            padding: 9px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            font-weight: bold;
+            cursor: pointer;
+            letter-spacing: .5px;
+        }
+        #api-submit:hover { background: #79c0ff; }
+        .api-err { color: var(--red); font-size: 12px; margin-top: 8px; display: none; }
+
+        /* ── Input area ── */
+        #input-area {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 11px 20px;
+            border-top: 1px solid var(--border);
+            background: var(--surface);
+            flex-shrink: 0;
+        }
+        #input-prompt { color: var(--green); white-space: nowrap; font-size: 14px; }
+        #cmd-input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            outline: none;
+            color: var(--text);
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 14px;
+            caret-color: var(--blue);
+        }
+        #cmd-input::selection { background: #1f6feb55; }
+        #send-btn {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--muted);
+            border-radius: 4px;
+            padding: 4px 12px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all .2s;
+            white-space: nowrap;
+        }
+        #send-btn:hover { border-color: var(--blue); color: var(--blue); }
+        #send-btn:disabled { opacity: .35; cursor: not-allowed; }
+
+        /* code block inside agent response */
+        .code-block {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 5px;
+            padding: 10px 12px;
+            margin: 6px 0;
+            font-size: 12.5px;
+            overflow-x: auto;
+            white-space: pre;
+        }
+    </style>
+</head>
+<body>
+
+<div id="terminal-window" style="position:relative">
+
+    <!-- API Key Overlay -->
+    <div id="api-overlay">
+        <div id="api-box">
+            <h3>⚡ PM CONSOLE — SETUP</h3>
+            <p>This AI terminal uses the Anthropic Claude API.<br>
+               Enter your API key to activate the multi-agent console.<br>
+               Your key is stored only in this browser session.</p>
+            <input id="api-key-input" type="password" placeholder="sk-ant-api03-..." />
+            <button id="api-submit">INITIALIZE CONSOLE</button>
+            <div class="api-err" id="api-err">Invalid key format. Key should start with sk-ant-</div>
+        </div>
+    </div>
+
+    <!-- Title bar -->
+    <div id="title-bar">
+        <div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+        <div id="title-text">PM Console — Multi-Agent AI Terminal</div>
+    </div>
+
+    <!-- Agent status bar -->
+    <div id="agent-bar">
+        <span style="color:var(--muted);font-size:11px;white-space:nowrap">Agents:</span>
+        <div class="agent-pill" id="pill-coordinator"
+             style="color:var(--orange);border-color:var(--orange)">
+            <div class="dot-sm"></div>COORDINATOR
+        </div>
+        <div class="agent-pill" id="pill-pm"
+             style="color:var(--green);border-color:var(--green)">
+            <div class="dot-sm"></div>PM AGENT
+        </div>
+        <div class="agent-pill" id="pill-fc"
+             style="color:var(--blue);border-color:var(--blue)">
+            <div class="dot-sm"></div>FUNCTIONAL CONSULTANT
+        </div>
+        <div class="agent-pill" id="pill-ba"
+             style="color:var(--yellow);border-color:var(--yellow)">
+            <div class="dot-sm"></div>BUSINESS ANALYST
+        </div>
+        <div class="agent-pill" id="pill-tech"
+             style="color:var(--purple);border-color:var(--purple)">
+            <div class="dot-sm"></div>TECH ADVISOR
+        </div>
+    </div>
+
+    <!-- Output -->
+    <div id="output"></div>
+
+    <!-- Input -->
+    <div id="input-area">
+        <span id="input-prompt">rukphong@pm-console:~ $</span>
+        <input id="cmd-input" type="text" autocomplete="off" autocorrect="off"
+               autocapitalize="off" spellcheck="false" placeholder="Ask anything..." />
+        <button id="send-btn">SEND ↵</button>
+    </div>
+
+</div>
+
+<script>
+// ── Agent definitions ────────────────────────────────────────────────────────
+
+const AGENTS = {
+    COORDINATOR: {
+        id: 'coordinator', pill: 'pill-coordinator',
+        name: 'COORDINATOR', icon: '⚡', color: '#f0883e',
+        system: `You are a routing coordinator for an AI multi-agent console used by Rukphong Pullaoy,
+a Senior Consultant APAC specializing in WMS, TMS, ERP, project management, and functional consulting.
+
+Your ONLY job: read the user's request and decide which specialist agent should handle it.
+
+Agents available:
+- PM_AGENT    → project planning, timelines, risk, stakeholders, RAID, go-live, status reports
+- FC_AGENT    → WMS/TMS/ERP functional design, system config, business processes, fit-gap, UAT
+- BA_AGENT    → requirements, user stories, gap analysis, process mapping (AS-IS/TO-BE), KPIs
+- TECH_AGENT  → SQL, API integration, system architecture, data migration, technical specs
+
+Reply ONLY with valid JSON, nothing else:
+{"agent":"PM_AGENT","reason":"brief routing reason in max 10 words"}
+
+Choose the most relevant single agent. Default: FC_AGENT for general consulting questions.`
+    },
+    PM_AGENT: {
+        id: 'pm', pill: 'pill-pm',
+        name: 'PROJECT MANAGER', icon: '📋', color: '#3fb950',
+        system: `You are a Senior Project Manager AI assistant inside a terminal console.
+Context: You assist Rukphong Pullaoy, Senior Consultant APAC at Infor, with 25+ years in logistics/WMS/TMS/ERP.
+
+Your expertise: project planning, stakeholder management, risk/issue/action logs (RAID),
+resource allocation, milestone tracking, go-live planning, status reports, change management,
+project governance, escalation paths, lessons learned.
+
+Format your responses for a terminal: use plain text, clear section headers with "── SECTION ──",
+bullet points with ▸, numbered lists where order matters. Be concise and action-oriented.
+Max ~350 words unless the question clearly demands more. No markdown headers with #.`
+    },
+    FC_AGENT: {
+        id: 'fc', pill: 'pill-fc',
+        name: 'FUNCTIONAL CONSULTANT', icon: '🔧', color: '#58a6ff',
+        system: `You are a Senior Functional Consultant AI assistant inside a terminal console.
+Context: You assist Rukphong Pullaoy, Senior Consultant APAC at Infor, expert in WMS (Infor/ACCP),
+TMS, ERP (SAP & Infor CloudSuite), logistics operations, e-commerce fulfillment across APAC.
+
+Your expertise: WMS configuration & design, TMS setup, ERP functional specs, business process mapping,
+fit-gap analysis, system integration, UAT management, go-live support, warehouse ops,
+inventory management, transport planning, Infor CloudSuite, ACCP WMS, marketplace/fulfillment.
+
+Format your responses for a terminal: use plain text, clear section headers with "── SECTION ──",
+bullet points with ▸. Include practical config tips, best practices, and process flows.
+Max ~350 words unless complexity demands more. No markdown headers with #.`
+    },
+    BA_AGENT: {
+        id: 'ba', pill: 'pill-ba',
+        name: 'BUSINESS ANALYST', icon: '📊', color: '#e3b341',
+        system: `You are a Senior Business Analyst AI assistant inside a terminal console.
+Context: You assist Rukphong Pullaoy, Senior Consultant APAC, with logistics & supply chain expertise.
+
+Your expertise: requirements gathering, user stories (As a / I want / So that), process mapping
+(AS-IS → TO-BE), gap analysis, business case writing, KPI/SLA definition, data analysis,
+stakeholder interviews, workshop facilitation, acceptance criteria, traceability matrices.
+
+Format your responses for a terminal: use plain text, clear section headers with "── SECTION ──",
+bullet points with ▸, tables using | characters when helpful. Provide templates and frameworks.
+Max ~350 words unless complexity demands more. No markdown headers with #.`
+    },
+    TECH_AGENT: {
+        id: 'tech', pill: 'pill-tech',
+        name: 'TECH ADVISOR', icon: '⚙️', color: '#d2a8ff',
+        system: `You are a Technical Advisor AI assistant inside a terminal console.
+Context: You assist Rukphong Pullaoy, Senior Consultant APAC, with WMS/TMS/ERP technical matters.
+
+Your expertise: SQL queries & optimization, REST/SOAP/EDI API integration, data migration scripts,
+system architecture, middleware design, Infor APIs, Tableau/reporting, database design,
+barcode/RFID systems, cloud infrastructure, integration testing.
+
+Format your responses for a terminal: use plain text, clear section headers with "── SECTION ──".
+Include code samples in clearly marked blocks starting with [CODE] and ending with [/CODE].
+Max ~350 words unless complexity demands more. No markdown headers with #.`
+    },
+};
+
+const AGENT_MAP = {
+    PM_AGENT: AGENTS.PM_AGENT,
+    FC_AGENT: AGENTS.FC_AGENT,
+    BA_AGENT: AGENTS.BA_AGENT,
+    TECH_AGENT: AGENTS.TECH_AGENT,
+};
+
+// ── State ────────────────────────────────────────────────────────────────────
+
+let apiKey = sessionStorage.getItem('pm_api_key') || '';
+let busy = false;
+let cmdHistory = [];
+let histIdx = -1;
+let conversationHistory = [];  // {role, content} for current specialist context
+let lastAgent = null;
+
+// ── DOM refs ─────────────────────────────────────────────────────────────────
+
+const outputEl  = document.getElementById('output');
+const cmdInput  = document.getElementById('cmd-input');
+const sendBtn   = document.getElementById('send-btn');
+const overlay   = document.getElementById('api-overlay');
+const apiInput  = document.getElementById('api-key-input');
+const apiSubmit = document.getElementById('api-submit');
+const apiErr    = document.getElementById('api-err');
+
+// ── Utility ──────────────────────────────────────────────────────────────────
+
+function esc(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function scrollBottom() { outputEl.scrollTop = outputEl.scrollHeight; }
+
+function addLine(html, cls='') {
+    const d = document.createElement('div');
+    d.className = 'line' + (cls?' '+cls:'');
+    d.innerHTML = html;
+    outputEl.appendChild(d);
+    scrollBottom();
+    return d;
+}
+
+function blank() { addLine(''); }
+
+function setAllPillsInactive() {
+    document.querySelectorAll('.agent-pill').forEach(p => p.classList.remove('active'));
+}
+
+function setPillActive(pillId) {
+    setAllPillsInactive();
+    const el = document.getElementById(pillId);
+    if (el) el.classList.add('active');
+}
+
+// Format agent body: handle [CODE]...[/CODE] blocks
+function formatAgentBody(text) {
+    const parts = text.split(/\[CODE\]([\s\S]*?)\[\/CODE\]/g);
+    let html = '';
+    for (let i = 0; i < parts.length; i++) {
+        if (i % 2 === 0) {
+            html += esc(parts[i]);
+        } else {
+            html += `</div><div class="code-block">${esc(parts[i].trim())}</div><div class="agent-body">`;
+        }
+    }
+    return html;
+}
+
+// ── Boot sequence ─────────────────────────────────────────────────────────────
+
+function boot() {
+    const art = [
+        `██████╗ ███╗   ███╗     ██████╗ ██████╗ ███╗   ██╗███████╗ ██████╗ ██╗     ███████╗`,
+        `██╔══██╗████╗ ████║    ██╔════╝██╔═══██╗████╗  ██║██╔════╝██╔═══██╗██║     ██╔════╝`,
+        `██████╔╝██╔████╔██║    ██║     ██║   ██║██╔██╗ ██║███████╗██║   ██║██║     █████╗  `,
+        `██╔═══╝ ██║╚██╔╝██║    ██║     ██║   ██║██║╚██╗██║╚════██║██║   ██║██║     ██╔══╝  `,
+        `██║     ██║ ╚═╝ ██║    ╚██████╗╚██████╔╝██║ ╚████║███████║╚██████╔╝███████╗███████╗`,
+        `╚═╝     ╚═╝     ╚═╝     ╚═════╝ ╚═════╝ ╚═╝  ╚═══╝╚══════╝ ╚═════╝ ╚══════╝╚══════╝`,
+    ];
+    art.forEach(l => addLine(`<span class="ascii-art">${esc(l)}</span>`));
+    blank();
+    addLine(`<span class="color-orange">Multi-Agent AI Terminal</span>  <span class="color-gray">v1.0  ·  Rukphong Pullaoy  ·  Senior Consultant APAC</span>`);
+    addLine(`<span class="color-gray">────────────────────────────────────────────────────────────────────────────────</span>`);
+    blank();
+    addLine(`<span class="color-green">✓</span> <span class="color-gray">Coordinator Agent    online</span>`);
+    addLine(`<span class="color-green">✓</span> <span class="color-gray">PM Agent             online</span>`);
+    addLine(`<span class="color-green">✓</span> <span class="color-gray">Functional Consultant online</span>`);
+    addLine(`<span class="color-green">✓</span> <span class="color-gray">Business Analyst     online</span>`);
+    addLine(`<span class="color-green">✓</span> <span class="color-gray">Tech Advisor         online</span>`);
+    blank();
+    addLine(`<span class="color-gray">Type your request and the Coordinator will route it to the right specialist.</span>`);
+    addLine(`<span class="color-gray">Commands: </span><span class="color-yellow">clear</span><span class="color-gray"> · </span><span class="color-yellow">reset</span><span class="color-gray"> (clear context) · </span><span class="color-yellow">agents</span><span class="color-gray"> (list agents) · </span><span class="color-yellow">ask [agent] [msg]</span><span class="color-gray"> (direct routing)</span>`);
+    blank();
+}
+
+// ── API call ──────────────────────────────────────────────────────────────────
+
+async function callClaude(system, messages, maxTokens=600) {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': apiKey,
+            'anthropic-version': '2023-06-01',
+            'anthropic-dangerous-direct-browser-calls': 'true',
+        },
+        body: JSON.stringify({
+            model: 'claude-sonnet-4-6',
+            max_tokens: maxTokens,
+            system,
+            messages,
+        }),
+    });
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error?.message || `HTTP ${res.status}`);
+    }
+    const data = await res.json();
+    return data.content[0].text;
+}
+
+// ── Main dispatch ─────────────────────────────────────────────────────────────
+
+async function dispatch(userInput) {
+    if (busy) return;
+    busy = true;
+    sendBtn.disabled = true;
+    cmdInput.disabled = true;
+
+    // Echo user input
+    blank();
+    const echoEl = document.createElement('div');
+    echoEl.className = 'line prompt-echo';
+    echoEl.innerHTML = `<span class="prompt-label">rukphong@pm-console:~ $</span><span style="color:var(--text)"> ${esc(userInput)}</span>`;
+    outputEl.appendChild(echoEl);
+    scrollBottom();
+
+    // Built-in commands
+    const cmd = userInput.trim().toLowerCase();
+    if (cmd === 'clear') {
+        outputEl.innerHTML = '';
+        finish(); return;
+    }
+    if (cmd === 'reset') {
+        conversationHistory = [];
+        lastAgent = null;
+        blank();
+        addLine(`<span class="color-green">✓ Conversation context cleared.</span>`);
+        blank();
+        finish(); return;
+    }
+    if (cmd === 'agents') {
+        blank();
+        addLine(`<span class="color-orange">── ACTIVE AGENTS ──────────────────────────────────</span>`);
+        blank();
+        Object.values(AGENTS).forEach(a => {
+            if (a.id === 'coordinator') return;
+            addLine(`  <span style="color:${a.color}">${a.icon} ${a.name}</span>`);
+        });
+        blank();
+        addLine(`<span class="color-gray">Use: ask pm / ask fc / ask ba / ask tech [message]</span>`);
+        blank();
+        finish(); return;
+    }
+
+    // Direct routing: ask [agent] [message]
+    const directMatch = userInput.match(/^ask\s+(pm|fc|ba|tech)\s+(.+)/i);
+    if (directMatch) {
+        const agentKey = { pm:'PM_AGENT', fc:'FC_AGENT', ba:'BA_AGENT', tech:'TECH_AGENT' }[directMatch[1].toLowerCase()];
+        const msg = directMatch[2];
+        await runSpecialist(AGENT_MAP[agentKey], msg, false);
+        finish(); return;
+    }
+
+    // ── Step 1: Coordinator routes ───────────────────────────────────────────
+    setPillActive('pill-coordinator');
+    const routingEl = document.createElement('div');
+    routingEl.className = 'route-line';
+    routingEl.innerHTML = `<span class="color-orange">⚡ COORDINATOR</span> <span class="color-gray">→ analyzing request</span> <span class="typing-dots"><span>.</span><span>.</span><span>.</span></span>`;
+    outputEl.appendChild(routingEl);
+    scrollBottom();
+
+    let targetAgent;
+    let routingReason = '';
+    try {
+        const routeReply = await callClaude(
+            AGENTS.COORDINATOR.system,
+            [{ role: 'user', content: userInput }],
+            80
+        );
+        const parsed = JSON.parse(routeReply.trim());
+        targetAgent = AGENT_MAP[parsed.agent] || AGENTS.FC_AGENT;
+        routingReason = parsed.reason || '';
+    } catch (e) {
+        targetAgent = AGENTS.FC_AGENT;
+        routingReason = 'defaulting to Functional Consultant';
+    }
+
+    routingEl.innerHTML = `<span class="color-orange">⚡ COORDINATOR</span> <span class="color-gray">→ routing to</span> <span style="color:${targetAgent.color}">${targetAgent.name}</span> <span class="color-gray">· ${esc(routingReason)}</span>`;
+    blank();
+
+    // ── Step 2: Specialist responds ──────────────────────────────────────────
+    await runSpecialist(targetAgent, userInput, true);
+    finish();
+}
+
+async function runSpecialist(agent, userInput, updateHistory) {
+    setPillActive(agent.pill);
+
+    // Build messages: include conversation history for continuity
+    const messages = updateHistory
+        ? [...conversationHistory, { role: 'user', content: userInput }]
+        : [{ role: 'user', content: userInput }];
+
+    // Create agent block with typing indicator
+    const block = document.createElement('div');
+    block.className = 'agent-block';
+    block.style.borderColor = agent.color;
+    block.innerHTML = `
+        <div class="agent-header" style="color:${agent.color}">
+            ${agent.icon} ${agent.name}
+        </div>
+        <div class="agent-body"><span class="typing-dots"><span>.</span><span>.</span><span>.</span></span></div>`;
+    outputEl.appendChild(block);
+    scrollBottom();
+
+    const bodyEl = block.querySelector('.agent-body');
+
+    try {
+        const reply = await callClaude(agent.system, messages, 800);
+
+        // Render response
+        bodyEl.innerHTML = `<div class="agent-body">${formatAgentBody(reply)}</div>`;
+
+        // Update conversation history (keep last 6 turns per agent)
+        if (updateHistory) {
+            conversationHistory.push({ role: 'user', content: userInput });
+            conversationHistory.push({ role: 'assistant', content: reply });
+            if (conversationHistory.length > 12) conversationHistory = conversationHistory.slice(-12);
+            lastAgent = agent;
+        }
+    } catch (err) {
+        bodyEl.innerHTML = `<span class="color-red">Error: ${esc(err.message)}</span>`;
+    }
+
+    blank();
+    setAllPillsInactive();
+}
+
+function finish() {
+    busy = false;
+    sendBtn.disabled = false;
+    cmdInput.disabled = false;
+    cmdInput.focus();
+    setAllPillsInactive();
+}
+
+// ── API Key setup ─────────────────────────────────────────────────────────────
+
+apiSubmit.addEventListener('click', () => {
+    const key = apiInput.value.trim();
+    if (!key.startsWith('sk-ant-') && !key.startsWith('sk-')) {
+        apiErr.style.display = 'block';
+        return;
+    }
+    apiKey = key;
+    sessionStorage.setItem('pm_api_key', key);
+    overlay.style.display = 'none';
+    cmdInput.focus();
+});
+
+apiInput.addEventListener('keydown', e => { if (e.key === 'Enter') apiSubmit.click(); });
+
+// If key already in session, skip overlay
+if (apiKey) overlay.style.display = 'none';
+
+// ── Input handling ────────────────────────────────────────────────────────────
+
+function submit() {
+    const val = cmdInput.value.trim();
+    if (!val || busy) return;
+    cmdHistory.unshift(val);
+    histIdx = -1;
+    cmdInput.value = '';
+    dispatch(val);
+}
+
+cmdInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { submit(); return; }
+    if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (histIdx < cmdHistory.length - 1) { histIdx++; cmdInput.value = cmdHistory[histIdx]; }
+    }
+    if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        if (histIdx > 0) { histIdx--; cmdInput.value = cmdHistory[histIdx]; }
+        else { histIdx = -1; cmdInput.value = ''; }
+    }
+    if (e.key === 'Tab') {
+        e.preventDefault();
+        const builtins = ['clear', 'reset', 'agents', 'ask pm ', 'ask fc ', 'ask ba ', 'ask tech '];
+        const partial = cmdInput.value;
+        const match = builtins.filter(b => b.startsWith(partial));
+        if (match.length === 1) cmdInput.value = match[0];
+    }
+});
+
+sendBtn.addEventListener('click', submit);
+document.addEventListener('click', () => { if (!busy) cmdInput.focus(); });
+
+// ── Start ─────────────────────────────────────────────────────────────────────
+boot();
+</script>
+</body>
+</html>
